@@ -56,7 +56,7 @@ for i,a in enumerate(gridGato):
         
 root.mainloop()
 """
-
+"""
 tablero=[[1,1,2],[1,1,2],[3,1,2]]
 for i,tab in enumerate(tablero):
   print(0 in tab,end="\t ")
@@ -67,3 +67,19 @@ for i,tab in enumerate(tablero):
       print("No hay ceros")
       break
 print("Hay ceros")
+"""
+"""
+lista=[1,2,3]
+
+def l():
+  print("antes",lista)
+  for a in range(len(lista),0,-1):
+    lista.remove(a)
+    print("en",lista)
+l()
+print("despues",lista)
+"""
+
+tablero=[[0 for x in range(0,3)] for y in range(0,3)]
+print(tablero)
+

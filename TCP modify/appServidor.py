@@ -17,31 +17,34 @@ tablero=[[0,0,0],[0,0,0],[0,0,0]]
 estatus=0
 
 
-
+#Validar que se puede tirar en la casilla
 def casillaValida(posicion):
     if tablero[posicion[0]][posicion[1]]==0:
         return True
     return False
+#Validar que aún no hay ganador y aún hay casillas para tirar
 def validarJuego() -> int:
     posiblesLineas=[]
     lineas=[]
     for tab in tablero:
         lineas.append([])
-
     for tab in tablero:
+        #Horizontales
         posiblesLineas.append(tab)
+        #Verticales
         for i,val in enumerate(tab):
             lineas[i].append(val)
     lineas.append([])
-    for a in range(0,len(tablero)):
-        lineas[-1].append(tablero[a][a])
     lineas.append([])
-    for a in reversed(range(0,len(tablero))):
-        lineas[-1].append(tablero[a][a])       
+    #Cruces
+    for a in range(0,len(tablero)):
+        lineas[-2].append(tablero[a][a])
+        lineas[-1].append(tablero[a][len(tablero)-1-a])
+
     for l in lineas:
         posiblesLineas.append(l)
-
-    #Se revisa si hay linea de 3
+    ##print(posiblesLineas)
+    #Se revisa si hay linea de k
 
     for pl in posiblesLineas:
         result=[]
@@ -60,18 +63,18 @@ def validarJuego() -> int:
     i=0
 
     for i,tab in enumerate(tablero):
-        print(0 in tab,end="\t ")
-        print(i, len(tablero))
+        ##print(0 in tab,end="\t ")
+        ##print(i, len(tablero))
         if 0 in tab:
             break
         elif i==len(tablero)-1: 
             return -1
     #0 Seguir jugando
     return 0
-
+#Modificar tablero
 def actualizarTablero(posicion,valor):
-    tablero[posicion[0]][posicion[1]]=valor
-
+    tablero[posicion[0]][posicion[1]]=valor 
+#Turno del servidor
 def jugar():
     while True:
         i=random.randint(0,len(tablero)-1)
@@ -79,55 +82,46 @@ def jugar():
         if tablero[i][e]==0:
             break
     actualizarTablero([i,e],2)
-
+#SOCKET SEND
 def enviarDatos():
     array=[estatus,tablero]
-    if estatus!=0:  array.append(str(horaFinalizado-horaComienzo))
+    if estatus!=0:  array.append(str(horaFinalizado-horaComienzo))          #Si acabó el juego se manda la hora
     Client_conn.send(pickle.dumps(array))
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as TCPServerSocket:
     TCPServerSocket.bind((HOST, PORT))
     #Escuchando
     TCPServerSocket.listen()
-    print("El servidor TCP está disponible y en espera de solicitudes")
+    #print("El servidor TCP está disponible y en espera de solicitudes")
     Client_conn, Client_addr = TCPServerSocket.accept()
     with Client_conn:
         #Inicia conexión
-        print("Conectado a", Client_addr)
-        while True:
-            #Recibe la dificultad
-            while True:
-                print("Esperando a recibir datos para dificultad... ")
-                data = Client_conn.recv(buffer_size)
-                if data!=None:
-                    print ("Recibido,", data,"   de ", Client_addr)
-                    data= data.decode('utf-8')
-                    print(type(data),"   ---  ",data)
-                    print("Enviando respuesta a", Client_addr)
-                    #    0 = Principiante               1 = Avanzado -> Añadir dos 
-                    if data != '0':
-                        #Agregando row
-                        for tab in tablero:
-                            for a in range(0,2):
-                                tab.append(0)
-                        #Agregando col
-                        for a in range(0,2):
-                            tablero.append([0,0,0,0,0])
-                    #   Convirtiendo datos y mandandolos   //  Se toma la hora de inicio
-                    horaComienzo=datetime.now()
-                    enviarDatos()
+        #print("Conectado a", Client_addr)
+        while True:         #Se mantiene conexión    
+            while True:     #print("Esperando a recibir datos para dificultad... ")
+                data = Client_conn.recv(buffer_size)            #print ("Recibido,", data,"   de ", Client_addr)
+                try:
+                    data=pickle.loads(data)
+                except:                                         #No se recibió información
+                    Client_conn.send(b"No se recibio dificultad")    
+                    TCPServerSocket.close()
                     break
+                #    0 = Principiante               1 = Avanzado -> Añadir dos 
+                if data==0: 
+                    tablero=[[0 for x in range(0,3)] for y in range(0,3)]
                 else:
-                    print ("Recibido,", data,"   de ", Client_addr)
-                    print("Enviando respuesta a", Client_addr)
-                    Client_conn.send(b"No se mando un entero")    
-            #Recibe los intentos de gato
-            while True:
-                print("Esperando a recibir datos para jugar... ")
+                    tablero=[[0 for x in range(0,5)] for y in range(0,5)]
+                #   Convirtiendo datos y mandandolos   //  Se toma la hora de inicio
+                horaComienzo=datetime.now()
+                enviarDatos()       #print("Enviando respuesta a", Client_addr)
+                break
+                   
+            
+            while True:     #Recibe los intentos de gato
+                #print("Esperando a recibir datos para jugar... ")
                 data = Client_conn.recv(buffer_size)
-                databArray=bytearray(data)
-                posicion=list(databArray)
-                print("Data recibida ", posicion)
+                posicion=pickle.loads(data)
+                #print("Data recibida ", posicion)
                 if casillaValida(posicion):
                     actualizarTablero(posicion,1)
                     #El servidor realiza su jugada
@@ -153,7 +147,23 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as TCPServerSocket:
                         enviarDatos()   
                         break 
                         #mandar tiempo y resultado de juego
-            break
+
+            #Continua o termina el juego
+            #print("Esperando a recibir continuación... ")
+
+            data = Client_conn.recv(buffer_size)
+            lista=pickle.loads(data)
+            if lista==-1:       #print("No continua el juego")
+                break
+            else:               #print("Sigue el juego")
+                estatus=0
+                for tab in tablero:
+                    for i,a in enumerate(tab):
+                        tab[i]=0
+                enviarDatos()
+
+
+
 
 
                 
