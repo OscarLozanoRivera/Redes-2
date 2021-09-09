@@ -13,11 +13,6 @@ WIDTH = 5           #Botones
 diccionario={1:"Ganador",2:"Perdedor",-1:"Empate"}
 buffer_size = 1024
     
-def limitador(entry_text):
-    if len(entry_text.get()) > 0:
-        #donde esta el :5 limitas la cantidad d caracteres
-        entry_text.set(entry_text.get()[:3])
-
 #Clase Botón
 class boton:
     botonnuevo=None
@@ -105,8 +100,6 @@ def conectar(HOST,PORT):
         TCPClientSocket.connect((HOST,PORT))
     except socket.error as e:
         messagebox.showerror(message="No se pudo conectar, intenta otra vez",title="Error de conexión")
-        print(e)
-        print(type(e))
         return
     frame0.pack_forget()
     frame4.pack(fill=X)
@@ -115,7 +108,10 @@ def conectar(HOST,PORT):
 def cerrarConexion():
     TCPClientSocket.close
     root.destroy()
-#main
+
+
+
+#Interfaz Gráfica
 
 root = Tk()
 ancho_ventana = 400
@@ -207,7 +203,7 @@ frame6 = Frame(root)
 statusbar = Label(root,relief=SUNKEN, anchor=W)
 statusbar.pack(side=BOTTOM, fill=X)
 
-#Boton Sair
+#Boton Salir
 frame7 = Frame(root)
 frame7.pack(side=BOTTOM,fill=X)
 

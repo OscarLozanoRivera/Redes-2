@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
 import socket
-import time
 import random
-import json
 import pickle
 from tkinter.constants import FALSE
 from datetime import datetime
