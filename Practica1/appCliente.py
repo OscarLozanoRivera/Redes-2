@@ -7,12 +7,7 @@ import tkinter
 from tkinter.ttk import Frame, Label, Entry
 from warnings import catch_warnings
 
-TCPClientSocket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-HEIGHT  = 10        #Botones
-WIDTH = 5           #Botones
-diccionario={1:"Ganador",2:"Perdedor",-1:"Empate"}
-buffer_size = 1024
-    
+
 #Clase Botón
 class boton:
     botonnuevo=None
@@ -28,9 +23,9 @@ class boton:
         self.botonnuevo.config(state=NORMAL)
 
 #Dibujar Tablero
-botones=[]
+
 def getIP():
-    return entryIP1.get()+"."+entryIP2.get()+"."+entryIP3.get()+"."+entryIP4.get()
+        return entryIP1.get()+"."+entryIP2.get()+"."+entryIP3.get()+"."+entryIP4.get()
 
 def dibujarTablero(gridGato):
     for i,tab in enumerate(gridGato):
@@ -77,9 +72,10 @@ def estadoJuego(estado,tiempo):
 
 #Socket SEND  
 def Mensajes(mensaje):
+    print("Enviando mensaje")
     TCPClientSocket.send(mensaje)
-    #print("Esperando una respuesta...P")
     data = TCPClientSocket.recv(buffer_size)
+    print("Se recibió información")
     info=pickle.loads(data)
     tablero=[]
     tablero=info[1]
@@ -97,19 +93,32 @@ def dificultad(d):
 #Socket CONCECT
 def conectar(HOST,PORT):
     try:                #print("{},{},{},{}".format(HOST,type(HOST),PORT,type(PORT)))
+        PORT=int(PORT)
+        print("Conectando con {} mediante el puerto: {}".format(HOST,PORT))
         TCPClientSocket.connect((HOST,PORT))
     except socket.error as e:
         messagebox.showerror(message="No se pudo conectar, intenta otra vez",title="Error de conexión")
         return
-    frame0.pack_forget()
-    frame4.pack(fill=X)
+    except:
+        print("Puerto inválido")
+    else:
+        frame0.pack_forget()
+        frame4.pack(fill=X)
 
 #Socket CLOSE
 def cerrarConexion():
+    print("Cerrando conexión")
     TCPClientSocket.close
     root.destroy()
 
+#main
 
+TCPClientSocket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+HEIGHT  = 10        #Botones
+WIDTH = 5           #Botones
+diccionario={1:"Ganador",2:"Perdedor",-1:"Empate"}
+buffer_size = 1024
+botones=[]
 
 #Interfaz Gráfica
 
@@ -134,7 +143,7 @@ frame1.pack(fill=X)
 lbl1 = Label(frame1, text="IP", width=8)
 lbl1.pack(side=LEFT, padx=5, pady=5)
 
-#Entrada IP
+#Frame IP
 entryIP1 = Entry(frame1,width=3)
 entryIP1.pack(side=LEFT,expand=False)
 
@@ -157,14 +166,14 @@ entryIP4 = Entry(frame1,width=3)
 entryIP4.pack(side=LEFT)
 
 
-
+#Frame Puerto
 frame2 = Frame(frame0)
 frame2.pack(fill=X)
 
 lbl2 = Label(frame2, text="Puerto", width=8)
 lbl2.pack(side=LEFT, padx=5, pady=5)
 
-#Entrada Puerto
+
 entry2 = Entry(frame2)
 entry2.pack(fill=X, padx=5, expand=True)
 
@@ -173,7 +182,7 @@ frame3.pack(fill=BOTH, expand=True)
 
 #Boton Iniciar Conexión
 
-button = Button(frame3, text="Obtener IP y Puerto",command=lambda:conectar(getIP(),int(entry2.get())) )
+button = Button(frame3, text="Obtener IP y Puerto",command=lambda:conectar(getIP(),entry2.get()) )
 button.pack(side=LEFT, padx=5, pady=5)
 
 

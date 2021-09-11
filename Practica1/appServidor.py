@@ -6,13 +6,6 @@ import pickle
 from tkinter.constants import FALSE
 from datetime import datetime
 from typing import List
-HOST = "192.168.0.17"  # Direccion de la interfaz de loopback estándar (localhost)
-PORT = 65432  # Puerto que usa el cliente  (los puertos sin provilegios son > 1023)
-buffer_size = 1024
-horaComienzo= None
-horaFinalizado= None
-tablero=[[0,0,0],[0,0,0],[0,0,0]]
-estatus=0
 
 
 #Validar que se puede tirar en la casilla
@@ -77,27 +70,41 @@ def jugar():
     while True:
         i=random.randint(0,len(tablero)-1)
         e=random.randint(0,len(tablero)-1) 
-        if tablero[i][e]==0:
+        if casillaValida([i,e]):
             break
     actualizarTablero([i,e],2)
 #SOCKET SEND
 def enviarDatos():
     array=[estatus,tablero]
-    if estatus!=0:  array.append(str(horaFinalizado-horaComienzo))          #Si acabó el juego se manda la hora
+    if estatus!=0:  array.append(str(horaFinalizado-horaComienzo))          #Si acabó el juego se manda el tiempo que duró el juego
+    print("\tSe envía un mensaje")
     Client_conn.send(pickle.dumps(array))
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as TCPServerSocket:
+#main
+
+HOST = "192.168.0.15"  # Direccion del servidor
+PORT = 65432  # Puerto que usa el cliente para conexión
+buffer_size = 1024
+horaComienzo= None
+horaFinalizado= None
+tablero=[[0,0,0],[0,0,0],[0,0,0]]
+estatus=0           #0 En juego         |1 Ganador      |2 Perdedor     |-1 Empate
+
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as TCPServerSocket:              #Socket.socket      &       Socket.close
+    print("Se creo un socket")
     TCPServerSocket.bind((HOST, PORT))
+    print("Se estableción IP y Puerto")
     #Escuchando
     TCPServerSocket.listen()
-    #print("El servidor TCP está disponible y en espera de solicitudes")
+    print("Servidor TCP  disponible y en espera de solicitudes")
     Client_conn, Client_addr = TCPServerSocket.accept()
-    with Client_conn:
-        #Inicia conexión
-        #print("Conectado a", Client_addr)
+    print("Conexión nueva aceptada")
+    with Client_conn:               #Inicia conexión
+        print("Conectado a", Client_addr)
         while True:         #Se mantiene conexión    
             while True:     #print("Esperando a recibir datos para dificultad... ")
                 data = Client_conn.recv(buffer_size)            #print ("Recibido,", data,"   de ", Client_addr)
+                print("\tSe recibió un mensaje")
                 try:
                     data=pickle.loads(data)
                 except:                                         #No se recibió información
@@ -118,18 +125,17 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as TCPServerSocket:
             while True:     #Recibe los intentos de gato
                 #print("Esperando a recibir datos para jugar... ")
                 data = Client_conn.recv(buffer_size)
+                print("\tSe recibió un mensaje")
                 posicion=pickle.loads(data)
                 #print("Data recibida ", posicion)
                 if casillaValida(posicion):
                     actualizarTablero(posicion,1)
-                    #El servidor realiza su jugada
                     estatus=validarJuego()
                     if estatus == 0:
-                        jugar()
+                        jugar()                         #El servidor realiza su jugada
                         estatus=validarJuego()
                         if estatus==0:
-                            #regresarNuevoTablero
-                            enviarDatos()
+                            enviarDatos()                #regresa Tablero
                         else:
                             # Se toma la hora de finalizado
                             horaFinalizado=datetime.now()
@@ -150,8 +156,8 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as TCPServerSocket:
             #print("Esperando a recibir continuación... ")
 
             data = Client_conn.recv(buffer_size)
-            lista=pickle.loads(data)
-            if lista==-1:       #print("No continua el juego")
+            continuar=pickle.loads(data)
+            if continuar==-1:       #print("No continua el juego")
                 break
             else:               #print("Sigue el juego")
                 estatus=0
