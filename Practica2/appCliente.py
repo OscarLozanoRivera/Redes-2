@@ -15,8 +15,10 @@ class boton:
         self.botonnuevo=Button(frame6,text=" ",width=5,height=3)
         self.botonnuevo.grid(row=posicion[0],column=posicion[1])
         self.botonnuevo.config(command=lambda:Mensajes(pickle.dumps(posicion)))
-    def modificarBoton(self,texto) ->None:
+    def modificarBoton(self,texto,enable) ->None:
         self.botonnuevo.config(text=texto)
+        if enable:
+            self.botonnuevo.config(state=NORMAL)
         self.botonnuevo.config(state=DISABLED)
     def limpiarBoton(self) ->None:
         self.botonnuevo.config(text=" ")
@@ -27,14 +29,17 @@ class boton:
 def getIP():
         return entryIP1.get()+"."+entryIP2.get()+"."+entryIP3.get()+"."+entryIP4.get()
 
-def dibujarTablero(gridGato):
+def dibujarTablero(gridGato,enable):
+    
     for i,tab in enumerate(gridGato):
         if 1 in tab or 2 in tab:
             ceros=0
+            print("Cero")
             break
         elif i==len(gridGato)-1: 
             ceros=1
-    if ceros==1:              #print("Nuevo tablero")
+    if ceros==1:             
+        print("Nuevo tablero")
         for a in range(len(botones)-1,-1,-1):
             botones[a].botonnuevo.grid_forget()
             botones[a].botonnuevo.destroy
@@ -42,12 +47,14 @@ def dibujarTablero(gridGato):
         for i,a in enumerate(gridGato):
             for e,b in enumerate(a):
                 botones.append(boton([i,e]))
-    else:                     #print("Modificar tablero")
+    else:                     
+        print("Modificar tablero")
         for i,a in enumerate(gridGato):
             for e,b in enumerate(a):
                 if b==1 or b==2:
-                    botones[i*len(gridGato)+e].modificarBoton("X") if b==1 else botones[i*len(gridGato)+e].modificarBoton("T")
-    #print("Se terminó de dibujar")
+                    botones[i*len(gridGato)+e].modificarBoton("X",False) if b==1 else botones[i*len(gridGato)+e].modificarBoton("T",False)
+    print("Se terminó de dibujar")
+    
 
 #Juego Terminado
 def estadoJuego(estado,tiempo):
@@ -63,7 +70,7 @@ def estadoJuego(estado,tiempo):
     #print("Cont",continuar)
     if continuar:
         Mensajes(pickle.dumps(0))     
-        frame4.pack(fill=X)
+        frame5.pack(fill=X)
         frame5.pack_forget()
         frame6.pack_forget()
     else:
@@ -77,18 +84,31 @@ def Mensajes(mensaje):
     data = TCPClientSocket.recv(buffer_size)
     print("Se recibió información")
     info=pickle.loads(data)
-    tablero=[]
-    tablero=info[1]
-    dibujarTablero(tablero)
+    print(info[1])
+    dibujarTablero(info[1],True) if info[2]==1 else dibujarTablero(info[1],False)
     if info[0]!=0:
-        estadoJuego(info[0],info[2])
+        estadoJuego(info[0],info[3])
+
+    esperarTablero()
     
-#Enviar dificultad
-def dificultad(d):    
-    Mensajes(pickle.dumps(d))
-    frame5.pack(anchor="center",side=TOP, padx=5, pady=5)
-    frame6.pack(anchor="center",side=TOP, padx=5, pady=5)
-    frame4.pack_forget()
+def esperarTablero():
+    while True:
+        print("Esperando tablero")
+        data=TCPClientSocket.recv(buffer_size)
+        if not data:
+            print("No hay datos")
+        else:
+            data=pickle.loads(data)
+        print(data)
+        if data[0]!=0:
+            print("El juego terminó")
+            estadoJuego(data[0],data[3])
+        if data[2]==1:              #Es su turno
+            dibujarTablero(data[1],True)
+            return
+        else:
+            dibujarTablero(data[1],False)
+        print("Regreso de dibujarse")
 
 #Socket CONCECT
 def conectar(HOST,PORT):
@@ -103,7 +123,10 @@ def conectar(HOST,PORT):
         print("Puerto inválido")
     else:
         frame0.pack_forget()
-        frame4.pack(fill=X)
+        frame5.pack(fill=X)
+    frame6.pack(anchor="center",side=TOP, padx=5, pady=5)
+    esperarTablero()
+    
 
 #Socket CLOSE
 def cerrarConexion():
@@ -132,7 +155,7 @@ posicion = str(ancho_ventana) + "x" + str(alto_ventana) + "+" + str(x_ventana) +
 root.geometry(posicion)
 root.resizable(False,False)
 
-root.title("Practica 1")
+root.title("Practica 2")
 #Frame Conexión
 frame0 = Frame(root)
 frame0.pack(fill=X)
@@ -182,22 +205,10 @@ frame3.pack(fill=BOTH, expand=True)
 
 #Boton Iniciar Conexión
 
-button = Button(frame3, text="Obtener IP y Puerto",command=lambda:conectar(getIP(),entry2.get()) )
+#button = Button(frame3, text="Obtener IP y Puerto",command=lambda:conectar(getIP(),entry2.get()) )
+button = Button(frame3, text="Obtener IP y Puerto",command=lambda:conectar("127.0.0.1",12345) )
 button.pack(side=LEFT, padx=5, pady=5)
 
-
-#Frame Dificultad
-
-frame4 = Frame(root)
-
-
-lbl3 = Label(frame4, text="Selecciona la dificultad ", width=30)
-lbl3.pack(side=TOP, padx=5, pady=5)
-
-button2 = Button(frame4, text="Principiante",command=lambda:dificultad(0) )
-button2.pack(side=LEFT, padx=5, pady=5)
-button3 = Button(frame4, text="Avanzado",command=lambda:dificultad(1) )
-button3.pack(side=RIGHT, padx=5, pady=5)
 
 #Frame Juego
 

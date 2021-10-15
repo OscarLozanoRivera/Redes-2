@@ -82,7 +82,7 @@ def enviarDatos():
 
 #main
 
-HOST = "192.168.0.15"  # Direccion del servidor
+HOST = "127.0.0.1"  # Direccion del servidor
 PORT = 65432  # Puerto que usa el cliente para conexión
 buffer_size = 1024
 horaComienzo= None
