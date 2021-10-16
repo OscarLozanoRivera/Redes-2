@@ -18,9 +18,11 @@ def sendData(conn):
     global listaConexiones
     global horaComienzo
     global horaFinalizado
+    global turno
     array=[estatus,tablero,0,None]
-    if estatus!=0:  array[-1]=(str(horaFinalizado-horaComienzo))      #Si acabó el juego se manda el tiempo que 
-    logging.debug("Se envían datos tablero")                          #duró el juego
+    if estatus!=0:  
+        array[-1]=(str(horaFinalizado-horaComienzo))      #Si acabó el juego se manda el tiempo que duró el juego
+    logging.debug("Se envían datos tablero")                          
     for hilo in listaConexiones:
         if hilo==conn:
             array[-2]=1
@@ -96,15 +98,8 @@ def alwaysOn(socketTcp,listaConexiones,barrier,lock):
             listaConexiones.append(client_conn)
             thread_read = threading.Thread(target=recibirMandarDatos, args=([client_conn, client_addr],(barrier,lock)))
             thread_read.start()
-            gestion_conexiones(listaConexiones)
     except Exception as e:
         print(e)
-
-def gestion_conexiones(listaConexiones):
-    for conn in listaConexiones:
-        if conn.fileno() == -1:
-            listaConexiones.remove(conn)
-    logging.debug("Hilos activos: %d",threading.active_count())
 
 def recibirMandarDatos(conexion,multithread):
     global turno
@@ -124,6 +119,8 @@ def recibirMandarDatos(conexion,multithread):
             while True:
                 lock.acquire()
                 #logging.debug("TRATANDO,Turno %s,%s,%s",turno,listaConexiones[turno],conn)
+                if estatus!=0:
+                    return
                 if listaConexiones[turno]==conn:
                     #logging.debug("Entró")
                     if turno==3:
@@ -143,7 +140,7 @@ def recibirMandarDatos(conexion,multithread):
             posicion=pickle.loads(data)
             logging.debug("Se leyó: %s",posicion)
             if casillaValida(posicion):
-                actualizarTablero(posicion,1) if turno%2==0 else actualizarTablero(posicion,2)
+                actualizarTablero(posicion,2) if turno%2==0 else actualizarTablero(posicion,1)
                 estatus=validarJuego()
                 if estatus == 0:
                         sendData(conn)                #regresa Tablero
@@ -153,7 +150,8 @@ def recibirMandarDatos(conexion,multithread):
                     horaFinalizado=datetime.now()
                     #regresarNuevoTablero   //  Con Status
                     sendData(conn)    
-                    #mandar tiempo y resultado de juego
+                    lock.release()
+                    return
             lock.release()
             time.sleep(0.1)
 
