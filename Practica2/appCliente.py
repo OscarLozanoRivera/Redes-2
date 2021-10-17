@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+__author__ = "Oscar Lozano Rivera"
+
 import pickle
 import socket
 from tkinter import Tk, Text, TOP, BOTH, X, LEFT, BOTTOM, W, SUNKEN, RIGHT, DISABLED, NORMAL, Widget, messagebox,Button
@@ -15,12 +17,13 @@ class boton:
     def __init__(self,posicion) -> None:
         self.botonnuevo=Button(frame6,text=" ",width=5,height=3)
         self.botonnuevo.grid(row=posicion[0],column=posicion[1])
-        self.botonnuevo.config(command=lambda:Mensajes(pickle.dumps(posicion)))
+        self.botonnuevo.config(command=lambda:mandarDatos(pickle.dumps(posicion)))
     def modificarBoton(self,texto,enable) ->None:
         self.botonnuevo.config(text=texto)
         if enable:
             self.botonnuevo.config(state=NORMAL)
-        self.botonnuevo.config(state=DISABLED)
+        else:
+            self.botonnuevo.config(state=DISABLED)
     def limpiarBoton(self) ->None:
         self.botonnuevo.config(text=" ")
         self.botonnuevo.config(state=NORMAL)
@@ -30,16 +33,17 @@ class boton:
 def getIP():
         return entryIP1.get()+"."+entryIP2.get()+"."+entryIP3.get()+"."+entryIP4.get()
 
-def dibujarTablero(gridGato):
+#Actualizar Tablero
+def dibujarTablero(gridGato,enable):
     for i,tab in enumerate(gridGato):
         if 1 in tab or 2 in tab:
             ceros=0
-            print("Cero")
+            #print("Cero")
             break
         elif i==len(gridGato)-1: 
             ceros=1
     if ceros==1:             
-        print("Nuevo tablero")
+        #print("Nuevo tablero")
         for a in range(len(botones)-1,-1,-1):
             botones[a].botonnuevo.grid_forget()
             botones[a].botonnuevo.destroy
@@ -47,63 +51,68 @@ def dibujarTablero(gridGato):
         for i,a in enumerate(gridGato):
             for e,b in enumerate(a):
                 botones.append(boton([i,e]))
+                if not enable:
+                    botones[-1].modificarBoton("",False)
     else:                     
-        print("Modificar tablero")
+        #print("Modificar tablero")
         for i,a in enumerate(gridGato):
             for e,b in enumerate(a):
-                if b==1 or b==2:
-                    botones[i*len(gridGato)+e].modificarBoton("X",False) if b==1 else botones[i*len(gridGato)+e].modificarBoton("O",False)
-    print("Se terminó de dibujar")
+                if b==1:
+                    botones[i*len(gridGato)+e].modificarBoton("X",False)  
+                elif b==2: 
+                    botones[i*len(gridGato)+e].modificarBoton("O",False)
+                else:
+                    if enable:
+                        botones[i*len(gridGato)+e].modificarBoton("",True)
+                    else:
+                        botones[i*len(gridGato)+e].modificarBoton("",False)
+    #print("Se terminó de dibujar")
     
-
 #Juego Terminado
-def estadoJuego(estado,tiempo):
-    MENSAJE=diccionario[estado]+"\n"+"Tiempo de Juego:\t"+tiempo[3:-4]
+def estadoJuego(estado,gano,tiempo):
     if estado==-1:
         status="Juego Empatado :)"
-    elif estado==1:
-        status="Han ganado los X"
+    elif estado==gano:
+        if estado==1:
+            status="Felicidades Ganaron los O"
+        else:
+            status="Felicidades Ganaron los X"
     else:
-        status="Han ganado los O"
+        if estado==1:
+            status="Lo siento Ganaron los O"
+        else:
+            status="Lo siento Ganaron los X"
     statusbar.config(text="\t"+status+"        Tiempo Jugado:"+tiempo[3:-4]+" seg")
-    messagebox.askokcancel(message=MENSAJE, title="Juego Terminado")
-
+    messagebox.askokcancel(message=status, title="Juego Terminado")
 
 #Socket SEND  
-def Mensajes(mensaje):
+def mandarDatos(mensaje):
     print("Enviando mensaje")
     TCPClientSocket.send(mensaje)
-    data = TCPClientSocket.recv(buffer_size)
-    print("Se recibió información")
-    info=pickle.loads(data)
-    print(info)
-    if info[0]!=0:
-        print("Termino en mensajes")
-        estadoJuego(info[0],info[3])
-    dibujarTablero(info[1])
-    
-def esperarTablero():
+
+#Socket RECV
+def recibirDatos():
     while True:
         print("Esperando tablero")
-        statusbar.config(text="Espera tu turno")
         data=TCPClientSocket.recv(buffer_size)
         if not data:
             print("No hay datos")
         else:
             data=pickle.loads(data)
+        if data[2]!=0:              #Es su turno
+            lbl4.config(text="Selecciona la casilla que quieres marcar, juegas con X") if data[2]==2 else lbl4.config(text="Selecciona la casilla que quieres marcar, juegas con O")
+            statusbar.config(text="Es tu turno, juegas con X") if data[2]==2 else statusbar.config(text="Es tu turno, juegas con O")            
+        else:
+            lbl4.config(text="No es tu turno")
+            statusbar.config(text="Espera tu turno")
         print(data)
         if data[0]!=0:
             print("El juego terminó")
-            dibujarTablero(data[1])
-            estadoJuego(data[0],data[3])
+            dibujarTablero(data[1],True) if data[2]!=0 else dibujarTablero(data[1],False)
+            estadoJuego(data[0],data[2],data[3])
             break
-        if data[2]==1:              #Es su turno
-            statusbar.config(text="Es tu turno")
-            dibujarTablero(data[1])
-        if data[2]==0:
-            statusbar.config(text="Espera tu turno")
-            dibujarTablero(data[1])
-        print("Regreso de dibujarse")
+        dibujarTablero(data[1],True) if data[2]!=0 else dibujarTablero(data[1],False)
+        #print("Regreso de dibujarse")
 
 #Socket CONCECT
 def conectar(HOST,PORT):
@@ -120,7 +129,7 @@ def conectar(HOST,PORT):
         frame0.pack_forget()
     frame5.pack(fill=X)
     frame6.pack(anchor="center",side=TOP, padx=5, pady=5)
-    thread_read = threading.Thread(target=esperarTablero, args=())
+    thread_read = threading.Thread(target=recibirDatos, args=())
     thread_read.start()
     
 
@@ -135,7 +144,6 @@ def cerrarConexion():
 TCPClientSocket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 HEIGHT  = 10        #Botones
 WIDTH = 5           #Botones
-diccionario={1:"Ganador",2:"Perdedor",-1:"Empate"}
 buffer_size = 1024
 botones=[]
 juegaCon= None
@@ -203,14 +211,14 @@ frame3.pack(fill=BOTH, expand=True)
 #Boton Iniciar Conexión
 
 #button = Button(frame3, text="Obtener IP y Puerto",command=lambda:conectar(getIP(),entry2.get()) )
-button = Button(frame3, text="Obtener IP y Puerto",command=lambda:conectar("127.0.0.1",12345) )
+button = Button(frame3, text="Obtener IP y Puerto",command=lambda:conectar("192.168.0.15",65432) )
 button.pack(side=LEFT, padx=5, pady=5)
 
 #Frame Juego
 
 frame5 = Frame(root)
 
-lbl4 = Label(frame5, text="Selecciona la casilla que quieres marcar")
+lbl4 = Label(frame5, text="Espera que todos los jugadores se conecten")
 lbl4.pack(side=TOP, padx=5, pady=5)
 
 frame6 = Frame(root)
