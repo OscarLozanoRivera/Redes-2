@@ -10,6 +10,9 @@ PORT = 12345  # The port used by the server
 buffer_size = 1024
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as TCPClientSocket:
+    print(type(HOST))
+    print(HOST)
+    print("Conectando con {} mediante el puerto: {}".format(HOST,PORT))
     TCPClientSocket.connect((HOST, PORT))
     data = TCPClientSocket.recv(buffer_size)
     data=pickle.loads(data)
