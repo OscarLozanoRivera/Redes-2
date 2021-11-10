@@ -4,13 +4,13 @@ __author__ = "Oscar Lozano Rivera"
 
 
 import logging
-from os import system
-import os
-from re import T
+import time
+from re import L, T
 import socket
 import threading
 import pickle
-from pyftpdlib.authorizers import DummyAuthorizer
+import pathlib
+
 
 
 comandos={
@@ -25,14 +25,17 @@ comandos={
 respuestas={
     "Abriendo" : 150  , 
     "Correcto" : 200  , 
+    "Puerto" : 201  ,
     "Nuevo" : 220  , 
     "CerrandoControl" : 221  , 
     "CerrandoDatos" : 226  , 
     "Continue" : 230  , 
     "Contraseña" : 331  , 
     "interrumpida" : 426  , 
+    "noFichero" : 450 ,
     "Argumento" : 501  , 
     "NoComando" : 502  , 
+    "ErrorAutenticación": 530,
     "NoRealizadado" : 550  
 }
 
@@ -58,8 +61,11 @@ def revisiónSintaxis(data,length):
     if data=='QUIT' or data=='LIST':
         if length==1:
             return True
-    if data=='PASS' or data=='PORT' or data=='RETR':
+    if data=='PASS' or data=='PORT' :
         if length==2:
+            return True
+    if data=='RETR':
+        if length==2 or length==3:
             return True
     return False
 
@@ -71,7 +77,7 @@ def revisionEstado(data,estado):
         else:
             return False
     if data[0]=='PASS':
-        if estado['user']!=None :
+        if estado['password']==None :
             return True
         else: 
             return False
@@ -81,32 +87,135 @@ def revisionEstado(data,estado):
         else: 
             return False
     if data[0]=='LIST':
-        pass
+        if estado['port']!=None :
+            return True
+        else: 
+            return False
     if data[0]=='PORT':
-        pass
+        if estado['port']==None :
+            return True
+        else: 
+            return False
     if data[0]=='RETR':
-        pass
+        if estado['port']!=None :
+            return True
+        else: 
+            return False
 
-def proceso(data,estado):
+def proceso(ClientConn,ipCliente,data,estado):
     if data[0]=='USER':
         if data[1] in usuarios:
             logging.debug("Usario encontrado")
             estado['user']=data[1]
             if len(data)==3:
-                estado['password']=data[2]
+                if data[2] == usuarios[estado['user']]:
+                    estado['password']=data[2]
+                    ClientConn.send(pickle.dumps([respuestas["Continue"]]))
+                else:
+                    ClientConn.send(pickle.dumps([respuestas["Contraseña"]]))
+            else:
+                ClientConn.send(pickle.dumps([respuestas["Contraseña"]]))
+            return True
         else:
             logging.debug("Usario no encontrado")
-            return False
+            ClientConn.send(pickle.dumps([respuestas["ErrorAutenticación"]]))
+        return True
     if data[0]=='PASS':
-        estado['password']=data[1]
-
-
+        if data[1] == usuarios[estado['user']]:
+            logging.debug("Contraseña Correcta")
+            estado['password']=data[1]
+            ClientConn.send(pickle.dumps([respuestas["Continue"]]))
+        else:
+            logging.debug("Contraseña Incorrecta")
+            ClientConn.send(pickle.dumps([respuestas["ErrorAutenticación"]]))    
+        return True
+    if data[0]=='PORT':
+        if estado['password']!=None:
+            if len(data[1])<=5:
+                estado['port']=data[1]
+                ClientConn.send(pickle.dumps([respuestas["Puerto"]]))
+            else:
+                ClientConn.send(pickle.dumps([respuestas["Argumento"]]))
+        else:
+            ClientConn.send(pickle.dumps([respuestas["NoRealizada"]]))
+    if data[0]=='QUIT':
+        if estado['user']!=None:
+            return False
+        else: 
+            ClientConn.send(pickle.dumps([respuestas["NoRealizada"]]))
+            return True 
+    if data[0]=='LIST':
+        if estado['port']!=None:
+            ClientConn.send(pickle.dumps([respuestas["Abriendo"]]))  
+        else:
+            ClientConn.send(pickle.dumps([respuestas["NoRealizada"]]))  
+            return True
+        datos=threading.Thread(target=conexionDatos,args=([ipCliente,estado['port']],'LIST'), name="Datos")
+        time.sleep(2)
+        datos.start()
+        datos.join()
+        logging.debug("Acabó el thread")
+        return True
+        #Crear conexión datos
+    if data[0]=='RETR':
+        if estado['port']!=None:
+            ClientConn.send(pickle.dumps([respuestas["Abriendo"]]))  
+            ls=[]
+            directorio = pathlib.Path('Practica3/ServerData')
+            for fichero in directorio.iterdir():
+                ls.append(fichero.name)
+            if not data[1] in ls :
+                return True
+        else:
+            ClientConn.send(pickle.dumps([respuestas["NoRealizada"]]))  
+            return True
+        datos=threading.Thread(target=conexionDatos, args=([ipCliente,estado['port'],data[1]],'RETR'), name="ServidorDTP")
+        time.sleep(2)
+        datos.start()
+        datos.join()
+        #logging.debug("Acabó el thread")
+        return True
+        #Crear conexión datos
+    
     return True
-        
-        
+
+def conexionDatos(estado,listoRetr):
+    global  TCPDatosSocket
+    TCPDatosSocket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:                #print("{},{},{},{}".format(HOST,type(HOST),PORT,type(PORT)))
+            HOST=estado[0]
+            PORT=int(estado[1])
+            logging.debug("Conectando con %s mediante el puerto: %s",HOST,PORT)
+            TCPDatosSocket.connect((HOST,PORT))
+    except Exception as e:
+            logging.debug("%s",e)
+            logging.debug("No se pudo conectar, intenta otra vez")
+    else:
+            logging.debug("Conexión exitosa")
+    data=None
+
+    if listoRetr=='LIST':
+        time.sleep(1)
+        directorio = pathlib.Path('Practica3/ServerData')
+        ls=[]
+        for fichero in directorio.iterdir():
+            ls.append(fichero.name)
+        TCPDatosSocket.send(pickle.dumps(ls))
+    else:
+        with open("Practica3/ServerData/"+estado[2],"r") as archivo:
+            for linea in archivo:
+                time.sleep(.001)
+                TCPDatosSocket.send(pickle.dumps([linea]))
+            #logging.debug("Fin mensajes")
+        logging.debug("Se cerró archivo")
+        TCPDatosSocket.send(pickle.dumps([]))
+        logging.debug("Fin de envio")
+    TCPDatosSocket.close()
+    return
+
+    
 
 
-    pass
 
 def alwaysOn(socketTcp,listaConexiones):
     try:
@@ -115,20 +224,23 @@ def alwaysOn(socketTcp,listaConexiones):
             client_conn, client_addr = socketTcp.accept()
             logging.debug("Contectado a %s - %s",client_addr,client_conn)
             listaConexiones.append(client_conn)
-            thread_read = threading.Thread(target=inOut, args=(client_conn, client_addr))
+            print(client_addr)
+            thread_read = threading.Thread(target=inOut, args=(client_conn,client_addr))
             thread_read.start()
     except Exception as e:
         logging.debug("%s",e)
 
-def inOut(ClientConn,ClientAddr):
+def inOut(ClientConn,ClienteAdr):
     estado={'user':None, 'password':None, 'port':None }
     with ClientConn:
+        ClientConn.send(pickle.dumps([respuestas["Nuevo"]]))   
         while True:
+            logging.debug("Esperando")
             data=ClientConn.recv(BUFFERSIZE)
             try:
                 data=pickle.loads(data)
             except Exception as e:                                         #No se recibió información
-                logging.debug("%s",e)
+                logging.debug("Errorts %s",e)
                 break
             else:
                 logging.debug("%s",data)
@@ -138,16 +250,28 @@ def inOut(ClientConn,ClientAddr):
                         logging.debug("Sintaxis Correcta")
                         #ClientConn.send(pickle.dumps([respuestas["Correcto"]]))    
                         if revisionEstado(data,estado):
-                            proceso(data)
+                            logging.debug("Estado Corecto")
+                            if not proceso(ClientConn,ClienteAdr[0],data,estado):
+                                #QUIT
+                                logging.debug("Quit")
+                                ClientConn.send(pickle.dumps([respuestas["CerrandoControl"]]))                               
+                                break
+                            elif data[0]=='RETR' or data[0]=='LIST':
+                                ClientConn.send(pickle.dumps([respuestas["CerrandoDatos"]]))                               
                         else:
-                            ClientConn.send(pickle.dumps([respuestas["NoRealizadado"]))                           
+                            logging.debug("Error de estado")
+                            if data[0]=='RETR':
+                                ClientConn.send(pickle.dumps([respuestas["noFichero"]]))                           
+                            else:
+                                ClientConn.send(pickle.dumps([respuestas["NoRealizadado"]]))                           
                     else:
                         logging.debug("Sintaxis Inorrecta")
                         ClientConn.send(pickle.dumps([respuestas["Argumento"]]))    
-
                 else:
-                    logging.debug("Comando Reconocido")
-                    ClientConn.send(pickle.dumps([502]))    
+                    logging.debug("Comando No Reconocido")
+                    ClientConn.send(pickle.dumps([respuestas["NoComando"]]))    
+    logging.debug("Cerrando Conexión Datos")
+            
 
 if __name__ == "__main__":
     listaConexiones=[]
@@ -155,8 +279,7 @@ if __name__ == "__main__":
     PORT=12345                  # Puerto que usa el servidor para conexión
     BUFFERSIZE=1024             # Tamaño máximo por mensaje
     NUMCON=5                    # Número máximo de conexiones
-
-
+    TCPDatosSocket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as TCPServerSocket:
         TCPServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)   #Habilita que se use un puerto para multipes conexiones
         TCPServerSocket.bind((HOST, int(PORT)))
