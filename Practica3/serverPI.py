@@ -44,8 +44,6 @@ usuarios={
     "user1" : "contra1",
     "user2" : "contra2",
     "user3" : "contra3",
-    "user4" : "contra4",
-    "user5" : "contra5",
 }
 
 
@@ -150,7 +148,7 @@ def proceso(ClientConn,ipCliente,data,estado):
         else:
             ClientConn.send(pickle.dumps([respuestas["NoRealizada"]]))  
             return True
-        datos=threading.Thread(target=conexionDatos,args=([ipCliente,estado['port']],'LIST'), name="Datos")
+        datos=threading.Thread(target=conexionDatos,args=([ipCliente,estado],'LIST'), name="Datos")
         time.sleep(2)
         datos.start()
         datos.join()
@@ -159,17 +157,17 @@ def proceso(ClientConn,ipCliente,data,estado):
         #Crear conexión datos
     if data[0]=='RETR':
         if estado['port']!=None:
-            ClientConn.send(pickle.dumps([respuestas["Abriendo"]]))  
             ls=[]
-            directorio = pathlib.Path('Practica3/ServerData')
+            directorio = pathlib.Path('Practica3/ServerData/'+estado['user'])
             for fichero in directorio.iterdir():
                 ls.append(fichero.name)
             if not data[1] in ls :
-                return True
+                return False
+            ClientConn.send(pickle.dumps([respuestas["Abriendo"]]))  
         else:
             ClientConn.send(pickle.dumps([respuestas["NoRealizada"]]))  
             return True
-        datos=threading.Thread(target=conexionDatos, args=([ipCliente,estado['port'],data[1]],'RETR'), name="ServidorDTP")
+        datos=threading.Thread(target=conexionDatos, args=([ipCliente,estado,data[1]],'RETR'), name="ServidorDTP")
         time.sleep(2)
         datos.start()
         datos.join()
@@ -184,7 +182,7 @@ def conexionDatos(estado,listoRetr):
     TCPDatosSocket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:                #print("{},{},{},{}".format(HOST,type(HOST),PORT,type(PORT)))
             HOST=estado[0]
-            PORT=int(estado[1])
+            PORT=int(estado[1]['port'])
             logging.debug("Conectando con %s mediante el puerto: %s",HOST,PORT)
             TCPDatosSocket.connect((HOST,PORT))
     except Exception as e:
@@ -196,13 +194,13 @@ def conexionDatos(estado,listoRetr):
 
     if listoRetr=='LIST':
         time.sleep(1)
-        directorio = pathlib.Path('Practica3/ServerData')
+        directorio = pathlib.Path('Practica3/ServerData/'+estado[1]['user'])
         ls=[]
         for fichero in directorio.iterdir():
             ls.append(fichero.name)
         TCPDatosSocket.send(pickle.dumps(ls))
     else:
-        with open("Practica3/ServerData/"+estado[2],"r") as archivo:
+        with open("Practica3/ServerData/"+estado[1]['user']+"/"+estado[2],"r") as archivo:
             for linea in archivo:
                 time.sleep(.001)
                 TCPDatosSocket.send(pickle.dumps([linea]))
@@ -253,11 +251,14 @@ def inOut(ClientConn,ClienteAdr):
                             logging.debug("Estado Corecto")
                             if not proceso(ClientConn,ClienteAdr[0],data,estado):
                                 #QUIT
-                                logging.debug("Quit")
-                                ClientConn.send(pickle.dumps([respuestas["CerrandoControl"]]))                               
-                                break
+                                if data[0]=='QUIT':
+                                    logging.debug("Quit")
+                                    ClientConn.send(pickle.dumps([respuestas["CerrandoControl"]]))                               
+                                    break
+                                elif data[0]=='RETR' or data[0]=='LIST':
+                                    ClientConn.send(pickle.dumps([respuestas["noFichero"]]))               
                             elif data[0]=='RETR' or data[0]=='LIST':
-                                ClientConn.send(pickle.dumps([respuestas["CerrandoDatos"]]))                               
+                                ClientConn.send(pickle.dumps([respuestas["CerrandoDatos"]]))               
                         else:
                             logging.debug("Error de estado")
                             if data[0]=='RETR':
