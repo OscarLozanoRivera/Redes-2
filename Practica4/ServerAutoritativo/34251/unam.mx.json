@@ -1,0 +1,38 @@
+
+{"Zone": {"Origin": "unam.mx"},
+
+ "Master":[
+      {"Type": "SOA", "Name": "@", 
+      "MasterServerName": "unam", 
+      "MaintainerName": "action.domains.", 
+      "Serial": 20},
+      {"Type": "NS", "Name": "@", 
+      "Target": "akky.mx"},
+      {"Type": "NS", "Name": "@", 
+      "Target": "akky.mx"},
+      {"Type": "NS", "Name": "@", 
+      "Target": "vaxa"},
+      {"Type": "MX", "Name": "@", 
+      "MailExchanger": "akky.mx",
+      "Preference": 10},
+      {"Type": "MX", "Name": "@", 
+      "MailExchanger": "akky.mx",
+      "Preference": 20},
+      {"Type": "A", "Name": "a", 
+      "Address": "132.248.166.19"},
+      {"Type": "A", "Name": "a", 
+      "Address": "132.248.166.17"},
+      {"Type": "A", "Name": "a", 
+      "Address": "132.248.166.18"},
+      {"Type": "A", "Name": "a", 
+      "Address": "132.248.166.20"},
+      {"Type": "A", "Name": "a", 
+      "Address": "2001:1218:3000:180::17"},
+      {"Type": "A", "Name": "a", 
+      "Address": "2001:1218:3000:180::18"},
+      {"Type": "A", "Name": "a", 
+      "Address": "2001:1218:3000:180::19"},
+      {"Type": "A", "Name": "a", 
+      "Address": "2001:1218:3000:180::20"}
+      ]     
+}

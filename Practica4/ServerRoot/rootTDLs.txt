@@ -1,0 +1,24 @@
+mx. 172800 IN NS c.mx-ns.mx.x
+c.mx-ns.mx.x 172800 IN A 12345 192.100.224.1
+mx. 172800 IN NS o.mx-ns.mx	
+o.mx-ns.mx	172800 IN A 12346 200.23.1.1
+mx. 172800 IN NS m.mx-ns.mx
+m.mx-ns.mx 172800 IN A 12347 200.94.176.1
+mx. 172800 IN NS e.mx-ns.mx
+e.mx-ns.mx 172800 IN A 12348 189.201.244.1
+mx. 172800 IN NS x.mx-ns.mx
+x.mx-ns.mx 172800 IN A 12349 201.131.252.1
+mx. 172800 IN NS i.mx-ns.mx
+i.mx-ns.mx 172800 IN A 12350 207.248.68.1
+edu. 172800 IN NS a.edu-servers.net
+a.edu-servers.net 172800 IN A 12351 192.5.6.30
+edu. 172800 IN NS e.edu-servers.net
+e.edu-servers.net 172800 IN A 12352 192.12.94.30
+com. 172800 IN NS c.gtld-servers.net
+c.gtld-servers.net 172800 IN A 12353 192.12.94.30
+com. 172800 IN NS d.gtld-servers.net
+d.gtld-servers.net 172800 IN A 12354 192.12.94.30
+amazon. 172800 IN NS dnsa.nic.amazon
+dnsa.nic.amazon 172800 IN A 12355 156.154.100.3
+amazon. 172800 IN NS dns2.nic.amazon
+dns2.nic.amazon 172800 IN A 12356 103.49.82.90
