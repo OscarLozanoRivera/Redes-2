@@ -11,15 +11,11 @@ import json
 HOST = "127.0.0.1"  # El hostname o IP del servidor
 bufferSize = 1024
 
-
-
-if len(sys.argv)==2:
-    print ("Número de parámetros: ",len(sys.argv)) 
 PORT=int(sys.argv[1])
 
 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as UDPServerSocket:
     UDPServerSocket.bind((HOST, PORT))
-    print("Servidor TDL ",PORT," activo, esperando peticiones")
+    print("Servidor Autoritativo ",PORT," activo, esperando peticiones")
     # Listen for incoming datagrams
     while (True):
         data, address = UDPServerSocket.recvfrom(bufferSize)

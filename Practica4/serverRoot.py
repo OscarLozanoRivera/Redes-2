@@ -6,7 +6,7 @@ import pathlib
 import pickle
 import socket
 
-HOST = "127.0.0.1"  # El hostname o IP del servidor
+HOST = "192.168.0.17"  # El hostname o IP del servidor
 PORT = 54321  # El puerto que usa el servidor
 bufferSize = 1024
 

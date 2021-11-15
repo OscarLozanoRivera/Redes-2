@@ -7,9 +7,9 @@ import socket
 import json
 
 #DNS Puerto 53
-HOST = "127.0.0.1"  # El hostname o IP del servidor
+HOST = "192.168.0.17"  # El hostname o IP del servidor
 PORT = 54321  # El puerto usado por el servidor
-ipServerRaiz = [("127.0.0.1", 54321)]
+ipServerRaiz = [("192.168.0.17", 54321)]
 bufferSize = 1024
 datos=[]
 
@@ -38,7 +38,7 @@ def llamarTDL(url,port):  #ip=port
                 UDPClientSocket.sendto(buscarIP, ("127.0.0.1", port))   #(ip,53)
                 msgFromServer,server = UDPClientSocket.recvfrom(bufferSize)
             except Exception as e:
-                print("Exception: ",e)
+                #print("Exception: ",e)
                 return []
             else:            
                 msgFromServer=pickle.loads(msgFromServer)
