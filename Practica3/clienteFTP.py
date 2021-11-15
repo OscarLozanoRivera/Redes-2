@@ -40,6 +40,8 @@ respuestas={
 }
 
 def conectar(HOST,PORT):
+    global TCPClientSocket
+    TCPClientSocket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:                #print("{},{},{},{}".format(HOST,type(HOST),PORT,type(PORT)))
             PORT=int(PORT)
             #print("Conectando con {} mediante el puerto: {}".format(HOST,PORT))
@@ -57,11 +59,12 @@ def conectar(HOST,PORT):
 
 
 def conexionDatos(port,config):
-    HOSTDatos="127.0.0.1"            # Direccion del servidor datos
+    HOSTDatos="192.168.0.17"            # Direccion del servidor datos
     PORTDatos=port                  # Puerto que usa el servidor para conexión datos
     NUMCON=5                    # Número máximo de conexiones
+    
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as TCPDatosSocket:
-        TCPDatosSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)   #Habilita que se use un puerto para multipes conexiones
+        TCPDatosSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)   #Habilita que se use un puerto para conexión
         TCPDatosSocket.bind((HOSTDatos, int(PORTDatos)))
         TCPDatosSocket.listen(int(NUMCON))
         #logging.debug("El servidor Cliente DTP está disponible en el puerto: %s",PORTDatos)
@@ -78,26 +81,30 @@ def conexionDatos(port,config):
 def entradaArchivos(TCPDatosSocket,config):
     data=None
     if config[0]:
-        data=TCPDatosSocket.recv(BUFFERSIZE)
-        data=pickle.loads(data)
-        for a in data:
-            print("- ",a)
+        while True:
+            data=TCPDatosSocket.recv(BUFFERSIZE)
+            try:
+                data=pickle.loads(data)
+            except:
+                break
+            else:
+                for a in data:
+                    print("- ",a)
         
     else:
 
         file = open("f:/Oscar/Documentos/ESCOM/7mo Semestre/Redes 2/PracticasGit/Practica3/ClientData/"+config[1],"w")
         while data!=[]:
             data=TCPDatosSocket.recv(BUFFERSIZE)
+            #print(data)
             try:
                 data=pickle.loads(data)
             except Exception as e:
-                logging.debug("%s",e)
-                break
+                file.write("\n")
             else:
                 for a in data:
                     file.write(a)
         file.close()
-    #logging.debug("Listones")
     TCPDatosSocket.close()
     return
 
@@ -105,22 +112,24 @@ def entradaArchivos(TCPDatosSocket,config):
 if __name__ == "__main__":
     PORTDatos=None
     mostrar=False
+    os.system("clear")
     print("|||   Terminal Cliente   |||")
     while True:
         while True:
             print(">>",end="")
             orden=input()
-            if re.search(r'ftp',orden) is not None:
-            #if re.search(r'ftp [0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3} [0-9]{1,5}',orden) is not None:
-                #splits=re.split(r' ',orden)
-                #splits[2]=int(splits[2])
+            #if re.search(r'ftp',orden) is not None:
+            if re.search(r'ftp [0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3} [0-9]{1,5}',orden) is not None:
+                splits=re.split(r' ',orden)
+                splits[2]=int(splits[2])
                 #print("Conectanding*")
-                conectar("127.0.0.1",12345)
-                #conectar(splits[1],splits[2])
-                
+                #conectar("127.0.0.1",12345)
+                conectar(splits[1],splits[2])
                 break
             else:
-                print("No se reconoce comando")
+                print("Comando no reconocido")
+                if orden=='exit':
+                    break   
             
         while True:
             print(usuario,">",end="")

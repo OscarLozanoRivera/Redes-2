@@ -54,7 +54,7 @@ logging.basicConfig(
 
 def revisiónSintaxis(data,length):
     if data=='USER':
-        if length>1 and length<4:
+        if length>1 and length<4:   #USER Admin passadmin
             return True
     if data=='QUIT' or data=='LIST':
         if length==1:
@@ -75,15 +75,12 @@ def revisionEstado(data,estado):
         else:
             return False
     if data[0]=='PASS':
-        if estado['password']==None :
+        if estado['password']==None and estado['user']!=None :
             return True
         else: 
             return False
     if data[0]=='QUIT':
-        if estado['user']!=None:
-            return True
-        else: 
-            return False
+        return True
     if data[0]=='LIST':
         if estado['port']!=None :
             return True
@@ -137,18 +134,15 @@ def proceso(ClientConn,ipCliente,data,estado):
         else:
             ClientConn.send(pickle.dumps([respuestas["NoRealizada"]]))
     if data[0]=='QUIT':
-        if estado['user']!=None:
-            return False
-        else: 
-            ClientConn.send(pickle.dumps([respuestas["NoRealizada"]]))
-            return True 
+        ClientConn.send(pickle.dumps([respuestas["CerrandoControl"]]))
+        return False
     if data[0]=='LIST':
         if estado['port']!=None:
             ClientConn.send(pickle.dumps([respuestas["Abriendo"]]))  
         else:
             ClientConn.send(pickle.dumps([respuestas["NoRealizada"]]))  
             return True
-        datos=threading.Thread(target=conexionDatos,args=([ipCliente,estado],'LIST'), name="Datos")
+        datos=threading.Thread(target=conexionDatos,args=([ipCliente,estado],'LIST'), name="ServidorDTP")
         time.sleep(2)
         datos.start()
         datos.join()
@@ -207,19 +201,19 @@ def conexionDatos(estado,listoRetr):
             #logging.debug("Fin mensajes")
         logging.debug("Se cerró archivo")
         TCPDatosSocket.send(pickle.dumps([]))
-        logging.debug("Fin de envio")
+    logging.debug("Fin de envio")
     TCPDatosSocket.close()
     return
-
-    
-
-
 
 def alwaysOn(socketTcp,listaConexiones):
     try:
         while True:
             logging.debug("El servidor TCP está en espera de solicitudes")
             client_conn, client_addr = socketTcp.accept()
+            """
+            for t in threading.enumerate():
+                logging.debug('Hilo %s', t.getName())
+            """
             logging.debug("Contectado a %s - %s",client_addr,client_conn)
             listaConexiones.append(client_conn)
             print(client_addr)
@@ -252,9 +246,7 @@ def inOut(ClientConn,ClienteAdr):
                             if not proceso(ClientConn,ClienteAdr[0],data,estado):
                                 #QUIT
                                 if data[0]=='QUIT':
-                                    logging.debug("Quit")
-                                    ClientConn.send(pickle.dumps([respuestas["CerrandoControl"]]))                               
-                                    break
+                                    return
                                 elif data[0]=='RETR' or data[0]=='LIST':
                                     ClientConn.send(pickle.dumps([respuestas["noFichero"]]))               
                             elif data[0]=='RETR' or data[0]=='LIST':
@@ -271,12 +263,11 @@ def inOut(ClientConn,ClienteAdr):
                 else:
                     logging.debug("Comando No Reconocido")
                     ClientConn.send(pickle.dumps([respuestas["NoComando"]]))    
-    logging.debug("Cerrando Conexión Datos")
-            
-
+    
+ 
 if __name__ == "__main__":
     listaConexiones=[]
-    HOST="127.0.0.1"            # Direccion del servidor
+    HOST="192.168.0.17"            # Direccion del servidor
     PORT=12345                  # Puerto que usa el servidor para conexión
     BUFFERSIZE=1024             # Tamaño máximo por mensaje
     NUMCON=5                    # Número máximo de conexiones
