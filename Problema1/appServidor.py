@@ -2,6 +2,54 @@
 
 __author__ = "Oscar Lozano Rivera"
 
+def alwaysOn(socketTcp,listaConexiones,barrier,lock):
+    try:
+        while True:
+            client_conn, client_addr = socketTcp.accept()
+            logging.debug("Contectado a %s - %s",client_addr,client_conn)
+            listaConexiones.append(client_conn)
+            thread_read = threading.Thread(target=juego, args=([client_conn, client_addr],(barrier,lock)))
+            thread_read.start()
+    except Exception as e:
+        logging.debug("%s",e)
+
+
+def juego(Direccion,BL)->None:
+    pass
+
+if __name__ == "__main__":
+    listaConexiones=[]
+    HOST="127.0.0.1"            # Direccion del servidor
+    PORT=12345                  # Puerto que usa el servidor para conexión
+    BUFFERSIZE=1024             # Tamaño máximo por mensaje
+    NUMCON=5                    # Número máximo de conexiones
+    NUM_THREADS = 4             # Número de hilos para comenzar
+    turno=0                     
+    horaComienzo= None
+    horaFinalizado= None
+
+    estatus=0                   #0 En juego         |1 Ganador      |2 Perdedor     |-1 Empate
+    barrier = threading.Barrier(NUM_THREADS)    #Barrera
+    lock = threading.Lock()                     #Candado
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as TCPServerSocket:
+        TCPServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)   #Habilita que se use un puerto para multipes conexiones
+        TCPServerSocket.bind((HOST, int(PORT)))
+        TCPServerSocket.listen(int(NUMCON))
+        logging.debug("El servidor TCP está disponible y en espera de solicitudes")
+        alwaysOn(TCPServerSocket,listaConexiones,barrier,lock)
+
+
+
+
+
+
+
+
+
+#Personajes Gravity Falls / Kick Buttowski
+
+
+
 
 import logging
 import socket

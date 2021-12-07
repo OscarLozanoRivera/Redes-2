@@ -1,4 +1,4 @@
-from tkinter import ttk,Tk,PhotoImage,LEFT
+"""from tkinter import ttk,Tk,PhotoImage,LEFT
 from tkinter.ttk import Frame, Label,Button
 
   
@@ -26,4 +26,13 @@ Button(root,style="Peligro.TButton",compound = LEFT).grid()
 Button(root,style="Peligro.TButton",compound = LEFT).grid() 
 
   
-root.mainloop()
+root.mainloop()"""
+
+import pathlib
+
+directorio = pathlib.Path('Problema1/media/personajes')
+ls=[]
+for fichero in directorio.iterdir():
+    ls.append(fichero.name)
+for archivo in ls:
+    print(archivo[:-4])
