@@ -1,13 +1,12 @@
 import speech_recognition as sr
-
+archivoAudio="Problema1/audioprueba.wav"
 r = sr.Recognizer() 
 
-with sr.Microphone() as source:
-    print('Speak Anything : ')
-    audio = r.listen(source)
-
+with sr.AudioFile(archivoAudio) as source:
+    print('Leyendo archivo de audio : ')
+    info_audio=r.record(source)
     try:
-        text = r.recognize_google(audio,language="es-ES")
-        print('You said: {}'.format(text))
+        text = r.recognize_google(info_audio,language="es-ES")
+        print('Dijiste: {}'.format(text))
     except:
         print('Sorry could not hear')

@@ -2,239 +2,207 @@
 
 __author__ = "Oscar Lozano Rivera"
 
-def alwaysOn(socketTcp,listaConexiones,barrier,lock):
-    try:
-        while True:
-            client_conn, client_addr = socketTcp.accept()
-            logging.debug("Contectado a %s - %s",client_addr,client_conn)
-            listaConexiones.append(client_conn)
-            thread_read = threading.Thread(target=juego, args=([client_conn, client_addr],(barrier,lock)))
-            thread_read.start()
-    except Exception as e:
-        logging.debug("%s",e)
-
-
-def juego(Direccion,BL)->None:
-    pass
-
-if __name__ == "__main__":
-    listaConexiones=[]
-    HOST="127.0.0.1"            # Direccion del servidor
-    PORT=12345                  # Puerto que usa el servidor para conexión
-    BUFFERSIZE=1024             # Tamaño máximo por mensaje
-    NUMCON=5                    # Número máximo de conexiones
-    NUM_THREADS = 4             # Número de hilos para comenzar
-    turno=0                     
-    horaComienzo= None
-    horaFinalizado= None
-
-    estatus=0                   #0 En juego         |1 Ganador      |2 Perdedor     |-1 Empate
-    barrier = threading.Barrier(NUM_THREADS)    #Barrera
-    lock = threading.Lock()                     #Candado
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as TCPServerSocket:
-        TCPServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)   #Habilita que se use un puerto para multipes conexiones
-        TCPServerSocket.bind((HOST, int(PORT)))
-        TCPServerSocket.listen(int(NUMCON))
-        logging.debug("El servidor TCP está disponible y en espera de solicitudes")
-        alwaysOn(TCPServerSocket,listaConexiones,barrier,lock)
-
-
-
-
-
-
-
-
-
-#Personajes Gravity Falls / Kick Buttowski
-
-
-
-
 import logging
 import socket
 import threading
 import pickle
 import time
 from datetime import datetime
-import queue
+from concurrent import futures
+import time
+import logging
+
+import grpc
+import wave
+import pyaudio
+import audio_pb2
+import audio_pb2_grpc
+import speech_recognition as sr
+
+listaJugadores = []
+jugadorActual = None
+ganador = None
+horaInicio = None
+horaFin = None
+
+turno=1
+
+state = False
+transformacion= ""
+resp = True
+nombre = ""
+texto = ""
+
+p = pyaudio.PyAudio()
+CHUNK = 1024
+FORMAT = pyaudio.paInt32
+CHANNELS = 2
+RATE = 44100
+WAVE_OUTPUT_FILENAME = "Problema1/serverAudio/recibido.wav"
 
 logging.basicConfig(
     level=logging.DEBUG,
     format='(%(threadName)-10s) %(message)s',
 )
+ 
 
-def sendData(conn):
-    global estatus
-    global listaConexiones
-    global horaComienzo
-    global horaFinalizado
-    global turno
-    array=[estatus,tablero,False,None]                   #Estatus,Tablero,Turno,TiempoJuegoa
-    if estatus!=0:  
-        array[3]=(str(horaFinalizado-horaComienzo))      #Si acabó el juego se manda el tiempo que duró el juego
-        turno=1
-    #   logging.debug("Se envían datos tablero")                          
-    for hilo in listaConexiones:
-        if hilo==conn or estatus>0:
-            if turno%2==0:
-                array[2]=1
-            else: 
-                array[2]=2  
+personajes=[
+    {'nombre':'Billy',
+     'genero':'hombre',
+     'estatura':'alto',
+     'articuloCabeza':'gorra',
+     'ropa':'pantalón',
+     'zapatos':'botas'
+    },
+    {'nombre':'Brad',
+     'genero':'hombre',
+     'estatura':'alto',
+     'ropa':'pantalón',
+     'zapatos':'tennis'
+    },
+    {'nombre':'Briana',
+     'genero':'mujer',
+     'estatura':'pequeña',
+     'articuloCabeza':['tiara','corona'],
+     'ropa':'pantalón',
+     'zapatos':'botas'
+    },
+    {'nombre':'Gunther',
+     'genero':'hombre',
+     'estatura':'pequeño',
+     'articuloCabeza':'gorra',
+     'ropa':'short',
+     'zapatos':'vikingos'
+    },
+    {'nombre':'Helga',
+     'genero':'mujer',
+     'estatura':'alta',
+     'articuloCabeza':['diadema','banda'],
+     'ropa':'falda',
+     'zapatos':'botas'
+    },
+    {'nombre':'Honey',
+     'genero':'mujer',
+     'estatura':'alto',
+     'ropa':'pantalón',
+     'zapatos':'zapatos'
+    },
+    {'nombre':'Jackie',
+     'genero':'hombre',
+     'estatura':'alto',
+     'articuloCabeza':'gorro',
+     'ropa':'pantalón',
+     'zapatos':'tennis'
+    },
+    {'nombre':'Kendall',
+     'genero':'mujer',
+     'estatura':'alta',
+     'articuloCabeza':['diadema','banda'],
+     'ropa':'falda',
+     'zapatos':'zapatos'
+    },
+    {'nombre':'Kick',
+     'genero':'hombre',
+     'estatura':'pequeño',
+     'articuloCabeza':'casco',
+     'ropa':'overol',
+     'zapatos':'botas'
+    },
+    {'nombre':'Magnus',
+     'genero':'hombre',
+     'estatura':'alto',
+     'articuloCabeza':'casco',
+     'ropa':'falda',
+     'zapatos':'botas'
+    },
+
+
+
+]
+
+def audioATexto():
+    r = sr.Recognizer()
+    with sr.AudioFile(WAVE_OUTPUT_FILENAME) as source:
+            info_audio=r.record(source)
+            try:
+                textoGoogle = r.recognize_google(info_audio,language="es-ES")
+            except:
+                textoGoogle="Sorry could not hear"
+                print('')
+    return textoGoogle
+
+def encontrarCoincidencia():
+    pass
+
+
+
+class Audio(audio_pb2_grpc.AudioServicer):
+
+    def iniciarJuego(self, request, context):
+        logging.debug("Servicio iniciarJuego")
+        listaJugadores.append(request.nombreJugador)
+        logging.debug("%s está jugando con num %s",listaJugadores[-1],len(listaJugadores))
+        return audio_pb2.lista(nombreJugador=request.nombreJugador, numeroJugador=len(listaJugadores))
+
+    def terminarJuego(self, request, context):
+        logging.debug("Servicio terminarJuego")
+        print(listaJugadores)
+        listaJugadores.remove(request.nombreJugador)
+        print(listaJugadores)
+        return audio_pb2.nombre(nombreJugador=request.nombreJugador)
+
+    def actualizarJuego(self, request, context):
+        if request.numeroJuego == turno:
+            state=True
+
         else:
-            array[2]=0
-        #logging.debug("Enviando a %s - [%s -%s -%s]",str(hilo),array[0],array[1],array[2])
-        hilo.send(pickle.dumps(array))
-        if estatus>0:
-            turno=turno+1
+            state=False
+        logging.debug("Servicio actualizarJuego")
+        return audio_pb2.respuestaPersonaje(estado=state,
+                                            textoAudio=transformacion,
+                                            respuesta=resp,
+                                            nombre=None,
+                                            textoPartida=texto)
 
-#Validar que se puede tirar en la casilla
-def casillaValida(posicion):
-    if tablero[posicion[0]][posicion[1]]==0:
-        return True
-    return False
+    def recibirAudio(self, request_iterator, context):
+        logging.debug("Servicio recibirAudio")
+        wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
+        wf.setnchannels(CHANNELS)
+        wf.setsampwidth(p.get_sample_size(FORMAT))
+        wf.setframerate(RATE)
+        frames = []
+        contador = 0
+        for request in request_iterator:
+            frames.append(request.chunk) 
+        wf.writeframes(b''.join(frames))     
+        wf.close()
+        
+        transformacion=audioATexto()
+        resp=encontrarCoincidencia()
+        logging.debug(transformacion)
+        return audio_pb2.respuestaPersonaje(estado=state,
+                                            textoAudio=transformacion,
+                                            respuesta=resp,
+                                            nombre=None,
+                                            textoPartida=texto)
 
-def validarJuego() -> int:
-    posiblesLineas=[]
-    lineas=[]
-    for tab in tablero:
-        lineas.append([])
-    for tab in tablero:
-        #Horizontales
-        posiblesLineas.append(tab)
-        #Verticales
-        for i,val in enumerate(tab):
-            lineas[i].append(val)
-    lineas.append([])
-    lineas.append([])
-    #Cruces
-    for a in range(0,len(tablero)):
-        lineas[-2].append(tablero[a][a])
-        lineas[-1].append(tablero[a][len(tablero)-1-a])
+    """def SaludaAMisAmigosEnVariosIdiomas(self, request_iterator, context):
+        for request in request_iterator:
+            for idiom in listaJugadores:
+                yield audio_pb2.RespuestaSaludo(saludo=idiom + ', %s!' % request.nombre)
+    """
 
-    for l in lineas:
-        posiblesLineas.append(l)
-    ##
-    # (posiblesLineas)
-    #Se revisa si hay linea de k
 
-    for pl in posiblesLineas:
-        result=[]
-        for item in pl:
-            if item not in result:
-                result.append(item)
-        if len(result)==1 and 0 not in result:  #1 Gana X //  2 Gana O
-            if 1 in result:
-                return 2
-            else:
-                return 1
-      
-            return 0
+def serve():
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=3))
+    audio_pb2_grpc.add_AudioServicer_to_server(Audio(), server)
+    server.add_insecure_port('[::]:50051')
+    server.start()
+    server.wait_for_termination()
 
-    #Busca si aún hay espacios para jugar   // -1 No hay espacios
-    i=0
 
-    for i,tab in enumerate(tablero):
-        #print(0 in tab,end="\t ")
-        #print(i, len(tablero))
-        if 0 in tab:
-            break
-        elif i==len(tablero)-1: 
-            return -1
-    #0 Seguir jugando
-    return 0
+if __name__ == '__main__':
+    logging.debug("Adivina Quien")
+    logging.debug("Servidor RPC Activo")
+    serve()
 
-#Modificar tablero
-def actualizarTablero(posicion,valor):
-    tablero[posicion[0]][posicion[1]]=valor 
-
-def alwaysOn(socketTcp,listaConexiones,barrier,lock):
-    try:
-        while True:
-            client_conn, client_addr = socketTcp.accept()
-            logging.debug("Contectado a %s - %s",client_addr,client_conn)
-            listaConexiones.append(client_conn)
-            thread_read = threading.Thread(target=recibirMandarDatos, args=([client_conn, client_addr],(barrier,lock)))
-            thread_read.start()
-    except Exception as e:
-        logging.debug("%s",e)
-
-def recibirMandarDatos(conexion,multithread):
-    global turno
-    global horaComienzo
-    global horaFinalizado
-    global estatus
-    barrier=multithread[0]
-    lock=multithread[1]
-    conn=conexion[0]
-    addr=conexion[1]
-    barrier.wait()
-    logging.debug("Superó la barrera")
-    horaComienzo=datetime.now()
-    try:
-        while True:
-            while True:
-                lock.acquire()
-                #logging.debug("TRATANDO,Turno %s,%s,%s",turno,listaConexiones[turno],conn)
-                if estatus!=0:
-                    return
-                if listaConexiones[turno]==conn:
-                    #logging.debug("Entró")
-                    if turno==3:
-                        turno=0 
-                    else:
-                        turno=turno+1
-                    break
-                else:
-                    lock.release()
-                    time.sleep(.1) 
-            sendData(conexion[0])
-            logging.debug("Recibiendo datos del cliente %s",addr)
-            data = conn.recv(BUFFERSIZE)
-            if not data:
-                logging.debug("Fin de %s",addr)
-                break
-            posicion=pickle.loads(data)
-            logging.debug("Se leyó: %s",posicion)           #No es necesario validar casilla marcada
-            actualizarTablero(posicion,2) if turno%2==0 else actualizarTablero(posicion,1)
-            estatus=validarJuego()
-            if estatus == 0:
-                    sendData(conn)                #regresa Tablero
-            else:
-                logging.debug("El juego terminó")
-                # Se toma la hora de finalizado
-                horaFinalizado=datetime.now()
-                #regresarNuevoTablero   //  Con Status actualizado
-                sendData(conn)    
-                lock.release()
-                return
-            lock.release()
-            time.sleep(0.1)
-
-    except Exception as e:
-        logging.debug("%s",e)
-        lock.release()
-    finally:
-        conn.close()
-        #lock.release()
-
-if __name__ == "__main__":
-    listaConexiones=[]
-    HOST="192.168.0.15"            # Direccion del servidor
-    PORT=12345                  # Puerto que usa el servidor para conexión
-    BUFFERSIZE=1024             # Tamaño máximo por mensaje
-    NUMCON=5                    # Número máximo de conexiones
-    NUM_THREADS = 4             # Número de hilos para comenzar
-    turno=0                     
-    horaComienzo= None
-    horaFinalizado= None
-    tablero=[[0,0,0],[0,0,0],[0,0,0]]       #Tablero
-    estatus=0                   #0 En juego         |1 Ganador      |2 Perdedor     |-1 Empate
-    barrier = threading.Barrier(NUM_THREADS)    #Barrera
-    lock = threading.Lock()                     #Candado
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as TCPServerSocket:
-        TCPServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)   #Habilita que se use un puerto para multipes conexiones
-        TCPServerSocket.bind((HOST, int(PORT)))
-        TCPServerSocket.listen(int(NUMCON))
-        logging.debug("El servidor TCP está disponible y en espera de solicitudes")
-        alwaysOn(TCPServerSocket,listaConexiones,barrier,lock)

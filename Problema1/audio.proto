@@ -1,0 +1,31 @@
+syntax="proto3";
+package audioRPC;
+// definición del servicio para mensajes de audio
+service Audio {
+        //Se incluye en lista de espera
+    rpc iniciarJuego(nombre) returns (lista){}
+        //Avisar que termina la sesión
+    rpc terminarJuego(nombre) returns (nombre){}
+        //Actualiza juego y pide permiso para enviar audio
+    rpc actualizarJuego(lista) returns (respuestaPersonaje){}
+        //Recibe el audio en trozos y regresa una respuesta a la pregunta hecha por voz
+    rpc recibirAudio(stream trozosAudio) returns (respuestaPersonaje) {}
+        //Actualiza al/los cliente/s de la actividad de los demás
+}
+message nombre{
+    string nombreJugador=1;
+}
+message lista{
+    string nombreJugador=1;
+    int32 numeroJugador=2;
+}
+message trozosAudio{
+    bytes chunk=1;
+}
+message respuestaPersonaje{
+    bool estado=1;
+    string textoAudio=2;
+    bool respuesta=3;
+    string nombre=4;
+    string textoPartida=5;
+}

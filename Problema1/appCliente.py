@@ -1,240 +1,282 @@
-#!/usr/bin/env python3
+# !/usr/bin/env python3
+# https://github.com/PySimpleGUI/PySimpleGUI
 
 __author__ = "Oscar Lozano Rivera"
+from tkinter import BooleanVar, Entry, Image, Tk, PhotoImage, messagebox, Label
+from tkinter.constants import ALL, E, N, TOP, LEFT, X
+from tkinter.ttk import Frame, Label, Button
+from PIL import ImageTk, Image
+from itertools import count, cycle
+from re import search
+import pathlib, threading, pyaudio, wave, logging, grpc, audio_pb2, audio_pb2_grpc
 
-import pickle
-import socket
-from tkinter import Tk, Text, TOP, BOTH, X, LEFT, BOTTOM, W, SUNKEN, RIGHT, DISABLED, NORMAL, Widget, messagebox,Button
-import tkinter
-from tkinter.ttk import Frame, Label, Entry
-from warnings import catch_warnings
-import threading
+CHUNK = 1024
+FORMAT = pyaudio.paInt32
+CHANNELS = 2
+RATE = 44100
+RECORD_SECONDS = 5
+WAVE_OUTPUT_FILENAME = "Problema1/audio/output.wav"
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='(%(threadName)-10s) %(message)s',)
 
-#Clase Botón
-class boton:
-    botonnuevo=None
-    def __init__(self,posicion) -> None:
-        self.botonnuevo=Button(frame6,text=" ",width=5,height=3)
-        self.botonnuevo.grid(row=posicion[0],column=posicion[1])
-        self.botonnuevo.config(command=lambda:mandarDatos(pickle.dumps(posicion)))
-    def modificarBoton(self,texto,enable) ->None:
-        self.botonnuevo.config(text=texto)
-        if enable:
-            self.botonnuevo.config(state=NORMAL)
+class ImageLabel(Button):  # https://pythonprogramming.altervista.org/animate-gif-in-tkinter/?doing_wp_cron=1637124258.4672770500183105468750
+    """
+    A Label that displays images, and plays them if they are gifs
+    :im: A PIL Image instance or a string filename
+    """
+    estado = False
+    img = None
+
+    def inicializar(self, grabar) -> None:
+        self.img = grabar
+        self.config(image=self.img, command=self.cambiarEstado)
+        self.grid(row=5, column=2, pady=10)
+
+    def cambiarEstado(self) -> None:
+        if self.estado:
+            self.estado = False
+            self.unload()
         else:
-            self.botonnuevo.config(state=DISABLED)
-    def limpiarBoton(self) ->None:
-        self.botonnuevo.config(text=" ")
-        self.botonnuevo.config(state=NORMAL)
+            self.estado = True
+            self.load('Problema1/media/grabando.gif')
+            datos=threading.Thread(target=self.grabar,args=( None, ), name="Grabando")
+            datos.start()
+        
 
-#Dibujar Tablero
+    def load(self, im):
+        if isinstance(im, str):
+            im = Image.open(im)
 
-def getIP():
-        return entryIP1.get()+"."+entryIP2.get()+"."+entryIP3.get()+"."+entryIP4.get()
+        frames = []
 
-#Actualizar Tablero
-def dibujarTablero(gridGato,enable):
-    for i,tab in enumerate(gridGato):
-        if 1 in tab or 2 in tab:
-            ceros=0
-            #print("Cero")
-            break
-        elif i==len(gridGato)-1: 
-            ceros=1
-    if ceros==1:             
-        #print("Nuevo tablero")
-        for a in range(len(botones)-1,-1,-1):
-            botones[a].botonnuevo.grid_forget()
-            botones[a].botonnuevo.destroy
-            botones.pop(a)
-        for i,a in enumerate(gridGato):
-            for e,b in enumerate(a):
-                botones.append(boton([i,e]))
-                if not enable:
-                    botones[-1].modificarBoton("",False)
-    else:                     
-        #print("Modificar tablero")
-        for i,a in enumerate(gridGato):
-            for e,b in enumerate(a):
-                if b==1:
-                    botones[i*len(gridGato)+e].modificarBoton("X",False)  
-                elif b==2: 
-                    botones[i*len(gridGato)+e].modificarBoton("O",False)
-                else:
-                    if enable:
-                        botones[i*len(gridGato)+e].modificarBoton("",True)
-                    else:
-                        botones[i*len(gridGato)+e].modificarBoton("",False)
-    #print("Se terminó de dibujar")
-    
-#Juego Terminado
-def estadoJuego(estado,gano,tiempo):
-    if estado==-1:
-        status="Juego Empatado :)"
-    elif estado==gano:
-        if estado==1:
-            status="Felicidades Ganaron los O"
+        try:
+            for i in count(1):
+                imag = ImageTk.PhotoImage(im.copy())
+                frames.append(imag)
+                im.seek(i)
+        except EOFError:
+            pass
+        self.frames = cycle(frames)
+
+        try:
+            self.delay = im.info['duration']
+        except:
+            self.delay = 0
+
+        if len(frames) == 1:
+            self.config(image=next(self.frames))
         else:
-            status="Felicidades Ganaron los X"
+            self.next_frame()
+
+    def unload(self):
+        self.frames = None
+        self.config(image=self.img)
+
+    def next_frame(self):
+        if self.frames:
+            self.config(image=next(self.frames))
+            self.after(self.delay, self.next_frame)
+
+    def grabar(self,algo):
+        p = pyaudio.PyAudio()
+        stream = p.open(format=FORMAT,
+                        channels=CHANNELS,
+                        rate=RATE,
+                        input=True,
+                        frames_per_buffer=CHUNK)
+
+        logging.debug("* recording")
+        frames = []
+        while(self.estado):
+            data = stream.read(CHUNK)
+            frames.append(data)
+        logging.debug("* done recording")
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+        wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
+        wf.setnchannels(CHANNELS)
+        wf.setsampwidth(p.get_sample_size(FORMAT))
+        wf.setframerate(RATE)
+        wf.writeframes(b''.join(frames))
+        wf.close()
+        enviarAudio(stub)
+
+class botonImagen:
+    botonn = None
+    BORDER_ENCENDIDO = 8
+    BORDER_APAGADO = 2
+    imagen = None
+    imagenNot = None
+    estado = True
+
+    def __init__(self, Frame1, posicion, photoimage, photoimageNot, nombre) -> None:
+        self.imagen = photoimage
+        self.imagenNot = photoimageNot
+        self.botonn = Button(Frame1, width=22)
+        self.botonn.grid(
+            row=posicion[0], column=posicion[1], padx=18, pady=10, sticky="nesw")
+        self.botonn.grid_columnconfigure(posicion[1], weight=1)
+        self.botonn.config(command=self.modificarBoton,
+                           image=photoimage, compound=TOP, text=nombre,)
+
+    def modificarBoton(self) -> None:
+        if self.estado:
+            self.estado = False
+            self.botonn.config(image=self.imagenNot, compound=TOP)
+        else:
+            self.estado = True
+            self.botonn.config(image=self.imagen)  
+
+def getIPHOST(ip, port, nombre ,root) -> BooleanVar:
+    global HOST
+    global PORT
+    global NOMBRE
+    print("ji",ip," ",port)
+    if search(r'[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3} [0-9]{1,5}', ip+" "+port) is not None:
+        HOST = ip
+        PORT = port
+        NOMBRE = nombre
+        root.destroy()
     else:
-        if estado==1:
-            status="Lo siento Ganaron los O"
-        else:
-            status="Lo siento Ganaron los X"
-    statusbar.config(text="\t"+status+"        Tiempo Jugado:"+tiempo[3:-4]+" seg")
-    messagebox.askokcancel(message=status, title="Juego Terminado")
+        continuar = messagebox.askretrycancel(
+            message="Dirección o Puerto Erróneo", title="Error")
+        if not continuar:
+            root.destroy()
 
-#Socket SEND  
-def mandarDatos(mensaje):
-    print("Enviando mensaje")
-    TCPClientSocket.send(mensaje)
+def conexion() -> None:
+    root = Tk()
+    # Icono Aplicación
+    ancho_ventana = 210
+    alto_ventana = 180
+    x_ventana = root.winfo_screenwidth() // 2 - ancho_ventana // 2
+    y_ventana = root.winfo_screenheight() // 2 - alto_ventana // 2
+    posicion = str(ancho_ventana) + "x" + str(alto_ventana) + \
+        "+" + str(x_ventana) + "+" + str(y_ventana)
+    root.geometry(posicion)
+    root.resizable(False, False)
+    root.config(background="orange")
 
-#Socket RECV
-def recibirDatos():
+    Label(root, text="Escribe IP y Puerto para conectarte", background="orange").grid( row=0, columnspan=4, sticky="ew", padx=5, pady=10)
+    Label(root, text="IP:", background="orange").grid(row=1, column=0, pady=5)
+    Label(root, text="Puerto:", background="orange").grid(row=2, column=0, pady=5)
+    Label(root, text="Nombre:", background="orange").grid(row=3, column=0, pady=5)
+    ip = Entry(root)
+    ip.grid(row=1, column=1, columnspan=3, pady=5)
+    port = Entry(root)
+    port.grid(row=2, column=1, columnspan=3, pady=5)
+    nombre = Entry(root)
+    nombre.grid(row=3, column=1, columnspan=3, pady=5)
+    
+    #Button(root,command=lambda:getIPHOST(ip.get(),port.get(),nombre.get(),root),text="Conectar").grid(row=3,columnspan=3,column=2,pady=5)
+    Button(root, command=lambda: getIPHOST('127.0.0.1', '50051',nombre.get(), root),text="Conectar").grid(row=4, columnspan=3, column=2, pady=5)
+
+    root.mainloop()
+
+def interfaz(stub,NOMBRE,NUMJUGADOR):
+
+    root = Tk()
+    # Icono Aplicación
+    root.call('wm', 'iconphoto', root._w, PhotoImage(
+        file='Problema1/media/icono.png'))
+    ancho_ventana = 890
+    alto_ventana = 890
+    x_ventana = root.winfo_screenwidth() // 2 - ancho_ventana // 2
+    y_ventana = root.winfo_screenheight() // 2 - alto_ventana // 2
+    posicion = str(ancho_ventana) + "x" + str(alto_ventana) + \
+        "+" + str(x_ventana) + "+" + str(y_ventana)
+    root.geometry(posicion)
+    root.resizable(False, False)
+
+    root.title("Adivina Quien  -  "+NOMBRE)
+
+    photo = PhotoImage(file=r"Problema1/media/icono.png")
+    photoimage = photo.subsample(4, 4)
+    grabar = PhotoImage(file=r"Problema1/media/rec.png")
+
+    botones = []
+    # Frame Principal
+    Frame1 = Frame(root).grid(ipadx=50, sticky="nesw")
+
+    # Indicaciones
+    indicaciones = Label(Frame1, text="Eres el jugador número "+str(NUMJUGADOR), padding=20)
+    indicaciones.grid(row=0, column=0, columnspan=2, sticky="nesw")
+    indicaciones = Label(Frame1, text="Espera tu turno . . .")
+    indicaciones.grid(row=0, column=3, columnspan=2, sticky="nesw")
+
+    # Botones de Imagen
+    directorio = pathlib.Path('Problema1/media/personajes')
+    ls = []
+    for fichero in directorio.iterdir():
+        ls.append(fichero.name)
+    for num in range(10):
+        photo = PhotoImage(file=r"Problema1/media/Personajes/"+ls[num])
+        photoNot = PhotoImage(file=r"Problema1/media/PersonajesNot/"+ls[num])
+        photoimage = photo.subsample(4, 4)
+        photoimageNot = photoNot.subsample(4, 4)
+        grabar = PhotoImage(file=r"Problema1/media/rec.png")
+        botones.append(botonImagen(Frame1, ((num//5)+1, num-(num//5*5)), photoimage, photoimageNot, ls[num][:-4]))
+
+    # Panel Jugadores
+    izquierda = Label(Frame1, relief="groove")
+    izquierda.grid(row=4, column=0, columnspan=2,
+                   sticky="nesw", padx=25, pady=30)
+    izquierda.config(text="Sas")
+    # Label Grabando
+    labelrecord = ImageLabel(Frame1)
+    labelrecord.inicializar(grabar)
+
+    # Panel Pistas
+    derecha = Label(Frame1, relief="groove")
+    derecha.grid(row=4, column=3, columnspan=2,
+                 sticky="nesw", padx=25, pady=30)
+    derecha.config(text="Sis")
+
+
+
+    root.mainloop()
+
+def iniciarJuego(stub,nombre):
+    response = stub.iniciarJuego(audio_pb2.nombre(nombreJugador=nombre))
+    print("Hola " + response.nombreJugador + " ,estas en la lista con el número: " + str(response.numeroJugador) )
+    return response.numeroJugador
+
+def terminarJuego(stub,nombre):
+    response = stub.terminarJuego(audio_pb2.nombre(nombreJugador=nombre))
+    print("Adios " + response.nombreJugador + " , gracias por jugar :) ")
+
+def mandarAudioIterator():
+    #Aquí se lee el archivo de audio
+    wf = wave.open(WAVE_OUTPUT_FILENAME, 'rb')
     while True:
-        print("Esperando tablero")
-        data=TCPClientSocket.recv(buffer_size)
-        if not data:
-            print("No hay datos")
-        else:
-            data=pickle.loads(data)
-        if data[2]!=0:              #Es su turno
-            lbl4.config(text="Selecciona la casilla que quieres marcar, juegas con X") if data[2]==2 else lbl4.config(text="Selecciona la casilla que quieres marcar, juegas con O")
-            statusbar.config(text="Es tu turno, juegas con X") if data[2]==2 else statusbar.config(text="Es tu turno, juegas con O")            
-        else:
-            lbl4.config(text="No es tu turno")
-            statusbar.config(text="Espera tu turno")
-        print(data)
-        if data[0]!=0:
-            print("El juego terminó")
-            dibujarTablero(data[1],True) if data[2]!=0 else dibujarTablero(data[1],False)
-            estadoJuego(data[0],data[2],data[3])
+        data = wf.readframes(CHUNK)
+        if data==b'':
             break
-        dibujarTablero(data[1],True) if data[2]!=0 else dibujarTablero(data[1],False)
-        #print("Regreso de dibujarse")
+        saludo = audio_pb2.trozosAudio(chunk=data)
+        yield saludo
+            
+def enviarAudio(stub):
+    response = stub.recibirAudio(mandarAudioIterator())
+    #Response es la respuesta del audio enviado
+    print('Estado: ',response.estado)
+    print('Texto Audio: ',response.textoAudio)
+    print('Respuesta: ',response.respuesta)
+    print('Nombre: ',response.nombre)
+    print('Texto Partida: ',response.textoPartida)
 
-#Socket CONCECT
-def conectar(HOST,PORT):
-    try:                #print("{},{},{},{}".format(HOST,type(HOST),PORT,type(PORT)))
-        PORT=int(PORT)
-        print("Conectando con {} mediante el puerto: {}".format(HOST,PORT))
-        TCPClientSocket.connect((HOST,PORT))
-    except socket.error as e:
-        messagebox.showerror(message="No se pudo conectar, intenta otra vez",title="Error de conexión")
-        return
-    except:
-        print("Puerto inválido")
-    else:
-        frame0.pack_forget()
-    frame5.pack(fill=X)
-    frame6.pack(anchor="center",side=TOP, padx=5, pady=5)
-    thread_read = threading.Thread(target=recibirDatos, args=())
-    thread_read.start()
-    
-
-#Socket CLOSE
-def cerrarConexion():
-    print("Cerrando conexión")
-    TCPClientSocket.close
-    root.destroy()
-
-#main
-
-TCPClientSocket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-HEIGHT  = 10        #Botones
-WIDTH = 5           #Botones
-buffer_size = 1024
-botones=[]
-juegaCon= None
-
-#Interfaz Gráfica
-
-root = Tk()
-ancho_ventana = 400
-alto_ventana = 400
-x_ventana = root.winfo_screenwidth() // 2 - ancho_ventana // 2
-y_ventana = root.winfo_screenheight() // 2 - alto_ventana // 2
-
-posicion = str(ancho_ventana) + "x" + str(alto_ventana) + "+" + str(x_ventana) + "+" + str(y_ventana)
-root.geometry(posicion)
-root.resizable(False,False)
-
-root.title("Practica 2")
-#Frame Conexión
-frame0 = Frame(root)
-frame0.pack(fill=X)
-
-frame1 = Frame(frame0)
-frame1.pack(fill=X)
-
-lbl1 = Label(frame1, text="IP", width=8)
-lbl1.pack(side=LEFT, padx=5, pady=5)
-
-#Frame IP
-entryIP1 = Entry(frame1,width=3)
-entryIP1.pack(side=LEFT,expand=False)
-
-lablePunto= Label(frame1,text=".")
-lablePunto.pack(side=LEFT)
-
-entryIP2 = Entry(frame1,width=3)
-entryIP2.pack(side=LEFT)
-
-lablePunto= Label(frame1,text=".")
-lablePunto.pack(side=LEFT)
-
-entryIP3 = Entry(frame1,width=3)
-entryIP3.pack(side=LEFT)
-
-lablePunto= Label(frame1,text=".")
-lablePunto.pack(side=LEFT)
-
-entryIP4 = Entry(frame1,width=3)
-entryIP4.pack(side=LEFT)
-
-
-#Frame Puerto
-frame2 = Frame(frame0)
-frame2.pack(fill=X)
-
-lbl2 = Label(frame2, text="Puerto", width=8)
-lbl2.pack(side=LEFT, padx=5, pady=5)
-
-
-entry2 = Entry(frame2)
-entry2.pack(fill=X, padx=5, expand=True)
-
-frame3 = Frame(frame0)
-frame3.pack(fill=BOTH, expand=True)    
-
-#Boton Iniciar Conexión
-
-#button = Button(frame3, text="Obtener IP y Puerto",command=lambda:conectar(getIP(),entry2.get()) )
-button = Button(frame3, text="Obtener IP y Puerto",command=lambda:conectar("192.168.0.15",65432) )
-button.pack(side=LEFT, padx=5, pady=5)
-
-#Frame Juego
-
-frame5 = Frame(root)
-
-lbl4 = Label(frame5, text="Espera que todos los jugadores se conecten")
-lbl4.pack(side=TOP, padx=5, pady=5)
-
-frame6 = Frame(root)
-
-#Barra de estado
-statusbar = Label(root,relief=SUNKEN, anchor=W)
-statusbar.pack(side=BOTTOM, fill=X)
-
-#Boton Salir
-frame7 = Frame(root)
-frame7.pack(side=BOTTOM,fill=X)
-
-button3 = Button(frame7, text="Terminar conexión y juego",command= cerrarConexion)
-button3.pack(side=RIGHT, padx=5, pady=5)
-
-root.mainloop()
-
-
-
+if __name__ == "__main__":
+    HOST = None
+    PORT = None
+    NOMBRE = None
+    NUMJUGADOR = None
+    conexion()
+    print("a", HOST,':',PORT)
+    if HOST != None and PORT != None:
+        with grpc.insecure_channel(HOST+':'+PORT) as channel:
+            stub = audio_pb2_grpc.AudioStub(channel)
+            NUMJUGADOR = iniciarJuego(stub,NOMBRE)
+            interfaz(stub,NOMBRE,NUMJUGADOR)
+            print("Terminó la interfaz")
+            terminarJuego(stub,NOMBRE)
