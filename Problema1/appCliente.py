@@ -2,13 +2,14 @@
 # https://github.com/PySimpleGUI/PySimpleGUI
 
 __author__ = "Oscar Lozano Rivera"
-from tkinter import BooleanVar, Entry, Image, Tk, PhotoImage, messagebox, Label
-from tkinter.constants import ALL, E, N, TOP, LEFT, X
-from tkinter.ttk import Frame, Label, Button
+import tkinter as tk
+from tkinter import BooleanVar, Entry, Image, Tk, PhotoImage, messagebox, Label , Text , END
+from tkinter.constants import INSERT, TOP
+from tkinter.ttk import Frame, Label, Button 
 from PIL import ImageTk, Image
 from itertools import count, cycle
-from re import search
-import pathlib, threading, pyaudio, wave, logging, grpc, audio_pb2, audio_pb2_grpc
+from re import T, search
+import pathlib, threading, pyaudio, wave, logging, grpc, audio_pb2, audio_pb2_grpc, tkinter as tk
 
 CHUNK = 1024
 FORMAT = pyaudio.paInt32
@@ -16,6 +17,17 @@ CHANNELS = 2
 RATE = 44100
 RECORD_SECONDS = 5
 WAVE_OUTPUT_FILENAME = "Problema1/audio/output.wav"
+NOMBRE = None
+NUMJUGADOR = None
+
+juegoNuevo = True
+panelizquierdo = None
+botongrabar = None
+botonSiguiente = None
+indicacion = None
+lock = threading.Lock()                     #Candado
+root = None
+botones=[]
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -32,7 +44,7 @@ class ImageLabel(Button):  # https://pythonprogramming.altervista.org/animate-gi
     def inicializar(self, grabar) -> None:
         self.img = grabar
         self.config(image=self.img, command=self.cambiarEstado)
-        self.grid(row=5, column=2, pady=10)
+        self.grid(row=4, column=2, pady=10)
 
     def cambiarEstado(self) -> None:
         if self.estado:
@@ -102,7 +114,12 @@ class ImageLabel(Button):  # https://pythonprogramming.altervista.org/animate-gi
         wf.setframerate(RATE)
         wf.writeframes(b''.join(frames))
         wf.close()
-        enviarAudio(stub)
+        if enviarAudio(stub):
+            botonSiguiente.grid(row=5, column=2, pady=10)
+        else:
+            indicacion.config(text="Espera tu turno . . .")
+            botongrabar.config(state="disabled")
+            actualizar(stub)
 
 class botonImagen:
     botonn = None
@@ -129,12 +146,16 @@ class botonImagen:
         else:
             self.estado = True
             self.botonn.config(image=self.imagen)  
+    
+    def reiniciarImagen(self) -> None:
+        if not self.estado:
+            self.estado = True
+            self.botonn.config(image=self.imagen)  
 
 def getIPHOST(ip, port, nombre ,root) -> BooleanVar:
     global HOST
     global PORT
     global NOMBRE
-    print("ji",ip," ",port)
     if search(r'[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3} [0-9]{1,5}', ip+" "+port) is not None:
         HOST = ip
         PORT = port
@@ -158,6 +179,7 @@ def conexion() -> None:
     root.geometry(posicion)
     root.resizable(False, False)
     root.config(background="orange")
+    root.title("Conexión")
 
     Label(root, text="Escribe IP y Puerto para conectarte", background="orange").grid( row=0, columnspan=4, sticky="ew", padx=5, pady=10)
     Label(root, text="IP:", background="orange").grid(row=1, column=0, pady=5)
@@ -175,8 +197,15 @@ def conexion() -> None:
 
     root.mainloop()
 
-def interfaz(stub,NOMBRE,NUMJUGADOR):
-
+def interfaz(stub):
+    global NOMBRE
+    global NUMJUGADOR
+    global panelizquierdo
+    global botongrabar
+    global indicacion
+    global botonSiguiente
+    global root
+    global botones
     root = Tk()
     # Icono Aplicación
     root.call('wm', 'iconphoto', root._w, PhotoImage(
@@ -196,15 +225,14 @@ def interfaz(stub,NOMBRE,NUMJUGADOR):
     photoimage = photo.subsample(4, 4)
     grabar = PhotoImage(file=r"Problema1/media/rec.png")
 
-    botones = []
     # Frame Principal
     Frame1 = Frame(root).grid(ipadx=50, sticky="nesw")
 
     # Indicaciones
     indicaciones = Label(Frame1, text="Eres el jugador número "+str(NUMJUGADOR), padding=20)
     indicaciones.grid(row=0, column=0, columnspan=2, sticky="nesw")
-    indicaciones = Label(Frame1, text="Espera tu turno . . .")
-    indicaciones.grid(row=0, column=3, columnspan=2, sticky="nesw")
+    indicacion = Label(Frame1, text="Espera tu turno . . .")
+    indicacion.grid(row=0, column=3, columnspan=2, sticky="nesw")
 
     # Botones de Imagen
     directorio = pathlib.Path('Problema1/media/personajes')
@@ -220,32 +248,100 @@ def interfaz(stub,NOMBRE,NUMJUGADOR):
         botones.append(botonImagen(Frame1, ((num//5)+1, num-(num//5*5)), photoimage, photoimageNot, ls[num][:-4]))
 
     # Panel Jugadores
-    izquierda = Label(Frame1, relief="groove")
-    izquierda.grid(row=4, column=0, columnspan=2,
-                   sticky="nesw", padx=25, pady=30)
-    izquierda.config(text="Sas")
+    panelizquierdo = Text(Frame1, relief="groove", width=5 ,height=10 )
+    panelizquierdo.grid(row=4, column=0,  columnspan=2, rowspan=2, sticky="ew", padx=25, pady=30)
+    panelizquierdo.insert(END,"Bienvenido al juego Adivina Quien")
+    panelizquierdo.config(state="disabled")
+
     # Label Grabando
-    labelrecord = ImageLabel(Frame1)
-    labelrecord.inicializar(grabar)
+    botongrabar = ImageLabel(Frame1)
+    botongrabar.inicializar(grabar)
+    if NUMJUGADOR!=1:
+        botongrabar.config(state='disabled')
 
+    #Boton Siguiente
+    botonSiguiente= tk.Button(Frame1,relief="groove",text="Jugar de Nuevo", command=otroJuego)
+
+    #Boton Finalizar
+    botonFinal= tk.Button(Frame1,relief="groove",text="Terminar juego")
+    botonFinal.grid(row=6, column=2, pady=10)
+    botonFinal.config(command=root.destroy)
     # Panel Pistas
-    derecha = Label(Frame1, relief="groove")
-    derecha.grid(row=4, column=3, columnspan=2,
-                 sticky="nesw", padx=25, pady=30)
-    derecha.config(text="Sis")
-
-
-
+    panelderecho = tk.Label(Frame1, relief="groove" ,height=10)
+    panelderecho.grid(row=4, column=3, columnspan=2, rowspan=2, sticky="ew" , padx=25, pady=30)
+    panelderecho.config(text="Preguntas prototipo: "+
+            "\n¿Tu personaje es alto/pequeño?"+
+            "\n¿Tu personaje tiene [objeto] en la cabeza?"+
+            "\n¿Tu personaje usa falda/pantalón?"+
+            "\n¿Tu personaje usa botas/tennis/zapatos?"+
+            "\n¿Tu personaje es hombre/mujer?"
+    )
+    #act = threading.Thread(target=actualizar, args=(stub))
+    #act.start()
+    actualizar(stub)
     root.mainloop()
 
-def iniciarJuego(stub,nombre):
-    response = stub.iniciarJuego(audio_pb2.nombre(nombreJugador=nombre))
-    print("Hola " + response.nombreJugador + " ,estas en la lista con el número: " + str(response.numeroJugador) )
-    return response.numeroJugador
+def otroJuego():
+    global stub
+    global NUMJUGADOR
+    global juegoNuevo
+    global botones
+    global botonSiguiente
+    juegoNuevo = True
+    NUMJUGADOR = iniciarJuego(stub)
+    actualizar(stub)
+    botonSiguiente.grid_forget()
+    for boton in botones:   
+        boton.reiniciarImagen()
 
-def terminarJuego(stub,nombre):
-    response = stub.terminarJuego(audio_pb2.nombre(nombreJugador=nombre))
-    print("Adios " + response.nombreJugador + " , gracias por jugar :) ")
+def iniciarJuego(stub):
+    global NOMBRE
+    global indicacion
+    global panelizquierdo
+    try:
+        indicacion.config(text="Espera tu turno . . .")        
+        panelizquierdo.config(state="normal")
+        panelizquierdo.delete(1.0,END)
+        panelizquierdo.insert(INSERT,"Bienvenido al juego Adivina Quien")
+        panelizquierdo.config(state="disabled")
+    finally:
+        response = stub.iniciarJuego(audio_pb2.nombre(nombreJugador=NOMBRE))
+        logging.debug("Hola %s ,estas en la lista con el número: %s" , response.nombreJugador , str(response.numeroJugador) )
+        return response.numeroJugador
+
+def terminarJuego(stub):
+    global NOMBRE
+    response = stub.terminarJuego(audio_pb2.nombre(nombreJugador=NOMBRE))
+    logging.log("Adios " + response.nombreJugador + " , gracias por jugar Adivina Quien :) ")
+
+def actualizar(stub):
+    global NOMBRE
+    global NUMJUGADOR
+    global panelizquierdo
+    global botongrabar
+    global indicacion
+    resp="No"
+    logging.debug('Esperando turno')
+    response = stub.actualizarJuego(audio_pb2.lista(nombreJugador=NOMBRE,numeroJugador=NUMJUGADOR))
+    if response.respuesta:
+        resp="Si"
+    if response.textoAudio !="Iniciando":
+        panelizquierdo.config(state="normal")
+        panelizquierdo.insert(END,"\n"+response.nombre+" preguntó: "+response.textoAudio+"\nRespuesta:"+resp)
+        panelizquierdo.config(state="disabled")        
+    if response.estado :
+        logging.debug("Juego Terminó")
+        botonSiguiente.grid(row=5, column=2, pady=10)
+        botongrabar.config(state="disabled")
+    else:
+        botongrabar.config(state="normal")
+    indicacion.config(text=response.textoPartida)
+    #print('Estado: ',response.estado)
+    #print('Texto Audio: ',response.textoAudio)
+    #print('Respuesta: ',response.respuesta)
+    #print('Nombre: ',response.nombre)
+    #print('Texto Partida: ',response.textoPartida)
+    return 
 
 def mandarAudioIterator():
     #Aquí se lee el archivo de audio
@@ -258,25 +354,37 @@ def mandarAudioIterator():
         yield saludo
             
 def enviarAudio(stub):
+    global panelizquierdo
+    global indicacion
+    global botongrabar
+    resp="No"
     response = stub.recibirAudio(mandarAudioIterator())
     #Response es la respuesta del audio enviado
-    print('Estado: ',response.estado)
-    print('Texto Audio: ',response.textoAudio)
-    print('Respuesta: ',response.respuesta)
-    print('Nombre: ',response.nombre)
-    print('Texto Partida: ',response.textoPartida)
+    if response.respuesta:
+        resp="Si"
+    panelizquierdo.config(state="normal")
+    panelizquierdo.insert(END,"\n"+response.nombre+" preguntó: "+response.textoAudio+"\nRespuesta:"+resp)
+    panelizquierdo.config(state="disabled")
+    #print('Estado: ',response.estado)
+    #print('Texto Audio: ',response.textoAudio)
+    #print('Respuesta: ',response.respuesta)
+    #print('Nombre: ',response.nombre)
+    #print('Texto Partida: ',response.textoPartida)
+    if response.estado :
+        logging.debug("Juego Terminó")
+        indicacion.config(text=response.textoPartida)
+        botongrabar.config(state="disabled")
+        return True
 
 if __name__ == "__main__":
     HOST = None
     PORT = None
-    NOMBRE = None
-    NUMJUGADOR = None
     conexion()
-    print("a", HOST,':',PORT)
     if HOST != None and PORT != None:
+        logging.debug("Conectando a %s mediante el puerto %s", HOST, PORT)
         with grpc.insecure_channel(HOST+':'+PORT) as channel:
-            stub = audio_pb2_grpc.AudioStub(channel)
-            NUMJUGADOR = iniciarJuego(stub,NOMBRE)
-            interfaz(stub,NOMBRE,NUMJUGADOR)
-            print("Terminó la interfaz")
-            terminarJuego(stub,NOMBRE)
+            stub = audio_pb2_grpc.AudioStub(channel)            
+            NUMJUGADOR = iniciarJuego(stub)
+            interfaz(stub)
+            logging.debug("Terminó la interfaz gráfica")
+            terminarJuego(stub)

@@ -27,7 +27,7 @@ Button(root,style="Peligro.TButton",compound = LEFT).grid()
 
   
 root.mainloop()"""
-
+"""
 import pathlib
 
 directorio = pathlib.Path('Problema1/media/personajes')
@@ -36,3 +36,84 @@ for fichero in directorio.iterdir():
     ls.append(fichero.name)
 for archivo in ls:
     print(archivo[:-4])
+
+    """
+
+personajes=[
+    {'nombre':'Billy',
+     'genero':'hombre',
+     'estatura':'alto',
+     'articuloCabeza':'gorra',
+     'ropa':'pantalón',
+     'zapatos':'botas'
+    },
+    {'nombre':'Brad',
+     'genero':'hombre',
+     'estatura':'alto',
+     'ropa':'pantalón',
+     'zapatos':'tennis'
+    },
+    {'nombre':'Briana',
+     'genero':'mujer',
+     'estatura':'pequeña',
+     'articuloCabeza':['tiara','corona'],
+     'ropa':'pantalón',
+     'zapatos':'botas'
+    },
+    {'nombre':'Gunther',
+     'genero':'hombre',
+     'estatura':'pequeño',
+     'articuloCabeza':'gorra',
+     'ropa':'short',
+     'zapatos':'vikingos'
+    },
+    {'nombre':'Helga',
+     'genero':'mujer',
+     'estatura':'alta',
+     'articuloCabeza':['diadema','banda'],
+     'ropa':'falda',
+     'zapatos':'botas'
+    },
+    {'nombre':'Honey',
+     'genero':'mujer',
+     'estatura':'alto',
+     'ropa':'pantalón',
+     'zapatos':'zapatos'
+    },
+    {'nombre':'Jackie',
+     'genero':'hombre',
+     'estatura':'alto',
+     'articuloCabeza':'gorro',
+     'ropa':'pantalón',
+     'zapatos':'tennis'
+    },
+    {'nombre':'Kendall',
+     'genero':'mujer',
+     'estatura':'alta',
+     'articuloCabeza':['diadema','banda'],
+     'ropa':'falda',
+     'zapatos':'zapatos'
+    },
+    {'nombre':'Kick',
+     'genero':'hombre',
+     'estatura':'pequeño',
+     'articuloCabeza':'casco',
+     'ropa':'overol',
+     'zapatos':'botas'
+    },
+    {'nombre':'Magnus',
+     'genero':'hombre',
+     'estatura':'alto',
+     'articuloCabeza':'casco',
+     'ropa':'falda',
+     'zapatos':'botas'
+    },
+]
+"""for personaje in personajes:
+    try:
+        print(personaje['articuloCabeza'])
+    except:
+        print("No lleva nada en la cabeza")
+        """
+for personaje in personajes:
+    print(personaje['nombre'])
