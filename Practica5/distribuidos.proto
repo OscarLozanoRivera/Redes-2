@@ -1,0 +1,53 @@
+syntax="proto3";
+package archivosRPC;
+// definición del servicio para mensajes de audio
+service Archivos {
+        //Inicio de sesión
+    rpc logging(autenticacion) returns (respuesta){}
+        //crearArchivo
+    rpc create(peticion) returns (respuesta){}
+        //Solicitar confirmacion que existe archivo para lectura
+    rpc preread(peticion) returns (respuesta){}
+        //Leer datos del archivo
+    rpc read(peticion) returns (stream peticionDatos){}
+        //Solicitar confirmacion que existe archivo para escritura
+    rpc prewrite(peticion) returns (respuesta){}
+        //Escribir datos en archivo
+    rpc write(stream peticionDatos) returns (respuesta){}
+        //Renombrar archivo
+    rpc rename(renombre) returns (respuesta) {}
+        //Borrar un archivo
+    rpc remove(peticion) returns (respuesta) {}
+        //Crear carpeta
+    rpc mkdir(peticion) returns (respuesta) {}
+        //Borrar carpeta
+    rpc rmdir(peticion) returns (respuesta) {}
+        //Listar carpeta
+    rpc readdir(peticion) returns (stream lista) {}
+        //Cambiar carpeta
+    rpc cd(peticion) returns (respuesta) {}
+}
+
+message autenticacion{
+    string usuario=1;
+    string contrasena=2;
+}
+message peticion{
+    string usuario=1;
+    string nombreArchivo=2;
+}
+message renombre{
+    string usuario=1;
+    string nombreArchivo=2;
+    string nombreNuevoArchivo=3;
+}
+message respuesta{
+    int32 estado=1;
+}
+message peticionDatos{
+    string datos=1;
+}
+message lista{
+    string nombre=1;
+    bool isArchivo=2;
+}
