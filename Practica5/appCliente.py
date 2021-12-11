@@ -1,9 +1,8 @@
 # !/usr/bin/env python3
 # https://github.com/PySimpleGUI/PySimpleGUI
 
-import logging
 from tkinter import Button, Entry, IntVar, Tk, PhotoImage, Radiobutton, Label, Text, messagebox
-from tkinter.constants import E, END, GROOVE,NORMAL, DISABLED, W
+from tkinter.constants import E, END, GROOVE, NORMAL, DISABLED, W
 import grpc, distribuidos_pb2, distribuidos_pb2_grpc
 from re import search
 root = None
@@ -11,6 +10,7 @@ ultimaOpcion = None
 channel = None
 stub = None
 usuario = "Admin"
+texto = ""
 
 
 def conectar(ip,port,usu,contra):
@@ -85,9 +85,8 @@ def conexion():
 
 def interfaz():
     global ultimaOpcion
-
+    global usuario
     def crearArchivo(nombreArchivo):
-        global usuario
         mensaje=""
         response = stub.create(distribuidos_pb2.peticion(usuario=usuario,nombreArchivo=nombreArchivo))
         if response.estado==0:
@@ -96,10 +95,48 @@ def interfaz():
             mensaje="Archivo creado satisfactoriamente"
         else:
             mensaje="No se pudo crear el archivo "+nombreArchivo
-        monitor.insert(END,"\n"+mensaje)
+        monitorRegistro.insert(END,"\n"+mensaje)
+
+    def leerArchivo(nombreArchivo):
+        response = stub.preread(distribuidos_pb2.peticion(usuario=usuario,nombreArchivo=nombreArchivo))
+        if response.estado==1:
+            monitorRegistro.insert(END,"\nSi existe el archivo")
+            monitorRegistro.insert(END,"\n")
+            for response in stub.read(distribuidos_pb2.peticion(usuario=usuario,nombreArchivo=nombreArchivo)):
+                monitorDatos.insert(END,response.datos)
+        elif response.estado==0:
+            monitorRegistro.insert(END,"\nNo existe el archivo solicitado")
+        else:
+            monitorRegistro.insert(END,"\nNo se pudo acceder al archivo solicitado")
+
+    def escribirIterator():
+        global texto
+        lineas=texto.split("\n")
+        for linea in lineas:
+            response=distribuidos_pb2.peticionDatos(datos=linea)
+            yield response
+
+    def escribirArchivo(nombreArchivo):
+        global texto
+        response = stub.prewrite(distribuidos_pb2.peticion(usuario=usuario,nombreArchivo=nombreArchivo))
+        if response.estado==1:
+            monitorRegistro.insert(END,"\nSi existe el archivo")
+            monitorRegistro.insert(END,"\n")
+            texto=monitorDatos.get("1.0",END)
+            response=stub.write(escribirIterator())
+            if response.estado==1:
+                monitorRegistro.insert(END,"\nSe escribió correctamente el archivo")
+            elif response.estado==0:
+                monitorRegistro.insert(END,"\nNo se escribió correctamente el archivo")
+            else:
+                monitorRegistro.insert(END,"\nNo se pudo acceder al archivo solicitado")
+        elif response.estado==0:
+            monitorRegistro.insert(END,"\nNo existe el archivo solicitado")
+        else:
+            monitorRegistro.insert(END,"\nNo se pudo acceder al archivo solicitado")
+
 
     def renombrarArchivo(nombreArchivo,nuevoNombre):
-        global usuario
         mensaje=""
         response = stub.rename(distribuidos_pb2.renombre(usuario=usuario,nombreArchivo=nombreArchivo,nombreNuevoArchivo=nuevoNombre))
         if response.estado==0:
@@ -110,10 +147,9 @@ def interfaz():
             mensaje="Ya existe un archivo :"+nuevoNombre
         elif response.estado==-2:
             mensaje="No se pudo renombrar el archivo:"+nombreArchivo
-        monitor.insert(END,"\n"+mensaje)
+        monitorRegistro.insert(END,"\n"+mensaje)
 
     def eliminarArchivo(nombreArchivo):
-        global usuario
         mensaje=""
         response = stub.remove(distribuidos_pb2.peticion(usuario=usuario,nombreArchivo=nombreArchivo))
         if response.estado==1:
@@ -122,10 +158,9 @@ def interfaz():
             mensaje="El archivo "+nombreArchivo+" no existe"
         else:
             mensaje="No se pudo borrar el archivo "+nombreArchivo
-        monitor.insert(END,"\n"+mensaje)
+        monitorRegistro.insert(END,"\n"+mensaje)
 
     def crearCarpeta(nombreCarpeta):
-        global usuario
         mensaje=""
         response = stub.mkdir(distribuidos_pb2.peticion(usuario=usuario,nombreArchivo=nombreCarpeta))
         if response.estado==1:
@@ -134,7 +169,7 @@ def interfaz():
             mensaje="La carpeta "+nombreCarpeta+" ya existe"
         else:
             mensaje="No se pudo crear la carpeta "+nombreCarpeta
-        monitor.insert(END,"\n"+mensaje)
+        monitorRegistro.insert(END,"\n"+mensaje)
         
     def eliminarCarpeta(nombreCarpeta):
         global usuario
@@ -146,10 +181,9 @@ def interfaz():
             mensaje="La carpeta "+nombreCarpeta+" no existe"
         else:
             mensaje="No se pudo eliminar la carpeta "+nombreCarpeta
-        monitor.insert(END,"\n"+mensaje)
+        monitorRegistro.insert(END,"\n"+mensaje)
     
     def cd(nombreCarpeta):
-        global usuario
         mensaje=""
         response = stub.cd(distribuidos_pb2.peticion(usuario=usuario,nombreArchivo=nombreCarpeta))
         if response.estado==1:
@@ -161,26 +195,60 @@ def interfaz():
             mensaje="La carpeta "+nombreCarpeta+" no existe"
         else:
             mensaje="No se pudo cambiar la ubicación a la carpeta anterior "
-        monitor.insert(END,"\n"+mensaje)
+        monitorRegistro.insert(END,"\n"+mensaje)
 
-    def select():
+    def listarCarpeta():
+        monitorRegistro.insert(END,"\n")
+        for response in stub.readdir(distribuidos_pb2.peticion(usuario=usuario,nombreArchivo="")):
+            if  response.isArchivo:
+                monitorRegistro.insert(END,"Archivo")
+            else :
+                monitorRegistro.insert(END,"Carpeta")
+            monitorRegistro.insert(END,"   :   "+response.nombre+"\n")
+            
+
+
+    def seleccionarEntry():
         global ultimaOpcion
-        if ultimaOpcion != None:
-            if ultimaOpcion==3:
-                nombres[ultimaOpcion][0].config(state=DISABLED)
-                nombres[ultimaOpcion][1].config(state=DISABLED)
-            else:
-                nombres[ultimaOpcion].config(state=DISABLED)
-        ultimaOpcion = opcion.get()
+        if ultimaOpcion==8:
+            ultimaOpcion = opcion.get()
+            if ultimaOpcion==8:
+                return
+        else:
+            if ultimaOpcion != None:
+                if ultimaOpcion==3:
+                    nombres[ultimaOpcion][0].config(state=DISABLED)
+                    nombres[ultimaOpcion][1].config(state=DISABLED)
+                else:
+                    if ultimaOpcion==1 or ultimaOpcion==2:
+                            labelDatos.grid_forget()
+                    monitorDatos.grid_forget()
+                    monitorRegistro.grid(rowspan=8)
+                    monitorRegistro.config(height=15)
+                    nombres[ultimaOpcion].config(state=DISABLED)
+            ultimaOpcion = opcion.get()
+            if ultimaOpcion==8:
+                return
         if ultimaOpcion==3:
             nombres[ultimaOpcion][0].config(state=NORMAL)
             nombres[ultimaOpcion][1].config(state=NORMAL)
         else:
+            if ultimaOpcion==1 or ultimaOpcion==2:
+                labelDatos.grid(row=5,column=2,sticky=W)
+                if ultimaOpcion==1:
+                    labelDatos.config(text="Datos de lectura")
+                else:
+                    labelDatos.config(text="Escribe los datos de escritura")
+                monitorRegistro.grid(rowspan=4)
+                monitorRegistro.config(height=8)
+                monitorDatos.grid(row=6, column=2, rowspan=4,columnspan=2, sticky=W)
+                monitorDatos.delete("1.0",END)
             nombres[ultimaOpcion].config(state=NORMAL)
+        
 
     def reiniciar():
         global ultimaOpcion
-        if ultimaOpcion != None:
+        if ultimaOpcion != None and ultimaOpcion!=8:
             if ultimaOpcion==3:
                 nombres[ultimaOpcion][0].config(state=DISABLED)
                 nombres[ultimaOpcion][1].config(state=DISABLED)
@@ -189,70 +257,85 @@ def interfaz():
         ultimaOpcion = None
         opcion.set(None)
 
-    def limpiar():
-        monitor.delete("1.0",END)
+    def limpiarRegistro():
+        monitorRegistro.config(state=NORMAL)
+        monitorRegistro.delete("1.0",END)
         reiniciar()
+        monitorRegistro.config(state=DISABLED)
+
+    def limpiarDatos():
+        monitorDatos.delete("1.0",END)
 
     def enviar():
         global ultimaOpcion
+        monitorRegistro.config(state=NORMAL)
         try:
-            if ultimaOpcion==3:
-                nombre=nombres[3][0].get()
-            else:
-                nombre=nombres[ultimaOpcion].get()
+            if ultimaOpcion!=8:
+                if ultimaOpcion==3:
+                    nombre=nombres[3][0].get()
+                else:
+                    nombre=nombres[ultimaOpcion].get()
         except:
-            monitor.insert(END,"\nNo se seleccionó una acción")
+            monitorRegistro.insert(END,"\nNo se seleccionó una acción")
             return
         if ultimaOpcion==0:
             if search(r".+[.].+$",nombre) is not None:
                 crearArchivo(nombre)
             else:
-                monitor.insert(END,"\nNombre de archivo incorrecto")
+                monitorRegistro.insert(END,"\nNombre de archivo incorrecto")
         elif ultimaOpcion==1:
-            pass
+            if search(r".+[.].+$",nombre) is not None:
+                leerArchivo(nombre)
+            else:
+                monitorRegistro.insert(END,"\nNombre de archivo incorrecto")
         elif ultimaOpcion==2:
-            pass
+            if search(r".+[.].+$",nombre) is not None:
+                escribirArchivo(nombre)
+            else:
+                monitorRegistro.insert(END,"\nNombre de archivo incorrecto")
         elif ultimaOpcion==3:
             if search(r".+[.].+$",nombre) is not None:
                 nombreNuevo=nombres[3][1].get()
                 if search(r".+[.].+$",nombreNuevo) is not None:
                     renombrarArchivo(nombre,nombreNuevo)
                 else:
-                    monitor.insert(END,"\nNombre de archivo nuevo incorrecto") 
+                    monitorRegistro.insert(END,"\nNombre de archivo nuevo incorrecto") 
             else:
-                monitor.insert(END,"\nNombre de archivo original incorrecto")
+                monitorRegistro.insert(END,"\nNombre de archivo original incorrecto")
         elif ultimaOpcion==4:
             if search(r".+[.].+$",nombre) is not None:
                 eliminarArchivo(nombre)
             else:
-                monitor.insert(END,"\nNombre de archivo incorrecto")
+                monitorRegistro.insert(END,"\nNombre de archivo incorrecto")
         elif ultimaOpcion==5:
             if nombre!="":
                 crearCarpeta(nombre)
             else:
-                monitor.insert(END,"\nNombre de carpeta incorrecto")
+                monitorRegistro.insert(END,"\nNombre de carpeta incorrecto")
         elif ultimaOpcion==6:
             if nombre!="":
                 eliminarCarpeta(nombre)
             else:
-                monitor.insert(END,"\nNombre de carpeta incorrecto")
+                monitorRegistro.insert(END,"\nNombre de carpeta incorrecto")
         elif ultimaOpcion==7:
             if nombre!="":
                 cd(nombre)
             else:
-                monitor.insert(END,"\nNombre de carpeta incorrecto")
+                monitorRegistro.insert(END,"\nNombre de carpeta incorrecto")
+        elif ultimaOpcion==8:
+            listarCarpeta()
         elif ultimaOpcion==-1:
-            monitor.insert(END,"\nError. No se ha seleccionada una opción válida")   
+            monitorRegistro.insert(END,"\nError. No se ha seleccionada una opción válida")   
         
-
-        #monitor.insert(END,"Enviando")
+        monitorRegistro.config(state=DISABLED)
+        #monitorRegistro.insert(END,"Enviando")
 
     root = Tk()
     # Icono Aplicación
     root.call('wm', 'iconphoto', root._w, PhotoImage(
         file='Problema1/media/icono.png'))
     ancho_ventana = 800
-    alto_ventana = 450
+    alto_ventana = 500
     x_ventana = root.winfo_screenwidth() // 2 - ancho_ventana // 2
     y_ventana = root.winfo_screenheight() // 2 - alto_ventana // 2
     posicion = str(ancho_ventana) + "x" + str(alto_ventana) + \
@@ -263,7 +346,7 @@ def interfaz():
     root.title("Sistema de Archivos Distribuidos")
 
     opciones = ['Create', 'Read', 'Write',
-                'Rename', 'Remove', 'MkDir', 'RmDir', 'CD']
+                'Rename', 'Remove', 'MkDir', 'RmDir', 'CD', 'ReadDir']
     opcion = IntVar()
     opcion.set(None)
     opcion
@@ -275,7 +358,9 @@ def interfaz():
     nombres = []
     for i, op in enumerate(opciones):
         Radiobutton(root, text=op, variable=opcion, value=i,
-                    command=select).grid(row=i+e, sticky=W, padx=15, pady=5)
+                    command=seleccionarEntry).grid(row=i+e, sticky=W, padx=15, pady=5)
+        if i==8:
+            break
         if i==3:
             nombre = Entry(root, state=DISABLED)
             nombre.grid(row=i+e, column=1, sticky=W, padx=20)
@@ -289,14 +374,21 @@ def interfaz():
             nombre.grid(row=i+e, column=1, sticky=W, padx=20)
             nombres.append(nombre)    
         
+
+        
         
 
-    monitor = Text(root, height=15, width=60, relief=GROOVE)
-    monitor.grid(row=1, column=2, rowspan=8,columnspan=2, sticky=W)
+    monitorRegistro = Text(root, height=15, width=60, relief=GROOVE, state=DISABLED)
+    monitorRegistro.grid(row=1, column=2, rowspan=7,columnspan=2, sticky=W)
+
+    labelDatos=Label(root)
+    monitorDatos = Text(root, height=8, width=60, relief=GROOVE)
+    
 
     Button(root, text="Reiniciar", command=reiniciar).grid(row=i+e+2, padx=15, pady=5)
     Button(root, text="Enviar", command=enviar).grid(row=i+e+2, column=1, padx=15, pady=15)
-    Button(root, text="Limpiar", command=limpiar).grid(row=i+e+2,column=2, padx=15, pady=5)
+    Button(root, text="Limpiar Registro", command=limpiarRegistro).grid(row=i+e+3,column=0, padx=15, pady=5)
+    Button(root, text="Limpiar Datos", command=limpiarDatos).grid(row=i+e+3,column=1, padx=15, pady=5)
 
     root.mainloop()
 

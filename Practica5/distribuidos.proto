@@ -27,7 +27,6 @@ service Archivos {
         //Cambiar carpeta
     rpc cd(peticion) returns (respuesta) {}
 }
-
 message autenticacion{
     string usuario=1;
     string contrasena=2;

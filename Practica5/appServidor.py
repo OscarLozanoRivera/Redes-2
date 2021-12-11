@@ -3,7 +3,9 @@
 __author__ = "Oscar Lozano Rivera"
 
 import logging, grpc, distribuidos_pb2, distribuidos_pb2_grpc
-import os,pathlib
+import re
+from threading import Lock
+import os
 from tkinter import EXCEPTION
 from tkinter.constants import E
 from concurrent import futures
@@ -27,8 +29,9 @@ carpetaActual={
     "user2" : "user2/",
     "user3" : "user3/",
 }
-
-
+usuarioLectura = None
+archivoLectura = None
+lock = Lock()                    
 
 class Archivos(distribuidos_pb2_grpc.ArchivosServicer):
 
@@ -57,16 +60,64 @@ class Archivos(distribuidos_pb2_grpc.ArchivosServicer):
             return distribuidos_pb2.respuesta(estado=-1)
 
     def preread(self, request, context):
-        return distribuidos_pb2.respuesta()
+        try:
+            with open(raiz+carpetaActual[request.usuario]+request.nombreArchivo, 'r'):
+                print("Si existe el archivo")
+                return distribuidos_pb2.respuesta(estado=1)
+        except FileNotFoundError:
+            print("No existe el archivo")
+            return distribuidos_pb2.respuesta(estado=0)
+        except IOError:
+            print("No se pudo abrir el archivo")
+            return distribuidos_pb2.respuesta(estado=-1)
 
     def read(self, request, context):
-        return distribuidos_pb2.respuesta()
+        print("Solicitud")
+        try:
+            with open(raiz+carpetaActual[request.usuario]+request.nombreArchivo, 'r') as archivo:
+                for line in archivo.readlines():
+                    yield distribuidos_pb2.peticionDatos(datos=line)
+        except:
+            print("Error al leer el archivo")
 
     def prewrite(self, request, context):
-        return distribuidos_pb2.respuesta()
+        print("Solicitar prewrite")
+        global usuarioLectura
+        global archivoLectura
+        lock.acquire()
+        try:
+            with open(raiz+carpetaActual[request.usuario]+request.nombreArchivo, 'r'):
+                print("Si existe el archivo")
+                usuarioLectura=request.usuario
+                archivoLectura=request.nombreArchivo
+            return distribuidos_pb2.respuesta(estado=1)
+        except FileNotFoundError:
+            print("No existe el archivo")
+            lock.release()
+            return distribuidos_pb2.respuesta(estado=0)
+        except IOError:
+            print("No se pudo abrir el archivo")
+            lock.release()
+            return distribuidos_pb2.respuesta(estado=-1)
 
-    def write(self, request, context):
-        return distribuidos_pb2.respuesta()
+    def write(self, request_iterator, context):
+        print("Solicitar write")
+        global usuarioLectura
+        global archivoLectura
+        try:
+            with open(raiz+carpetaActual[usuarioLectura]+archivoLectura, 'a') as archivo:
+                for request in request_iterator:
+                    archivo.write(request.datos+"\n")
+            print("Se escribió correctamente")        
+            return distribuidos_pb2.respuesta(estado=1)
+        except FileNotFoundError:
+            print("No existe el archivo")
+            return distribuidos_pb2.respuesta(estado=0)
+        except:
+            print("No se pudo escribir el archivo")
+            return distribuidos_pb2.respuesta(estado=-1)
+        finally:
+            lock.release()
 
     def rename(self, request, context):
         try:
@@ -117,16 +168,11 @@ class Archivos(distribuidos_pb2_grpc.ArchivosServicer):
             print("No se pudo eliminar la carpeta")
             return distribuidos_pb2.respuesta(estado=-1)
 
-    def readdir(self, request_iterator, context):
-
-        for request in request_iterator:
-            pass
-        return distribuidos_pb2.respuesta()
-        return distribuidos_pb2.respuestaPersonaje(estado=state,
-                                            textoAudio=transformacion,
-                                            respuesta=resp,
-                                            nombre=ultimoJugador,
-                                            textoPartida=texto)
+    def readdir(self, request, context):
+        archivo= os.listdir(raiz+carpetaActual[request.usuario])
+        for arch in archivo:
+            yield distribuidos_pb2.lista(nombre=arch,
+                                            isArchivo=  not os.path.isdir(os.path.join(raiz, carpetaActual[request.usuario],arch))  )
 
     def cd(self, request, context):
         global carpetaActual
