@@ -11,7 +11,7 @@ service Archivos {
         //Leer datos del archivo
     rpc read(peticion) returns (stream peticionDatos){}
         //Solicitar confirmacion que existe archivo para escritura
-    rpc prewrite(peticion) returns (respuesta){}
+    rpc prewrite(peticionEscritura) returns (respuesta){}
         //Escribir datos en archivo
     rpc write(stream peticionDatos) returns (respuesta){}
         //Renombrar archivo
@@ -34,6 +34,11 @@ message autenticacion{
 message peticion{
     string usuario=1;
     string nombreArchivo=2;
+}
+message peticionEscritura{
+    string usuario=1;
+    string nombreArchivo=2;
+    string opcionEscritura=3;
 }
 message renombre{
     string usuario=1;

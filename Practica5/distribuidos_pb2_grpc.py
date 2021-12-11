@@ -37,7 +37,7 @@ class ArchivosStub(object):
                 )
         self.prewrite = channel.unary_unary(
                 '/archivosRPC.Archivos/prewrite',
-                request_serializer=distribuidos__pb2.peticion.SerializeToString,
+                request_serializer=distribuidos__pb2.peticionEscritura.SerializeToString,
                 response_deserializer=distribuidos__pb2.respuesta.FromString,
                 )
         self.write = channel.stream_unary(
@@ -190,7 +190,7 @@ def add_ArchivosServicer_to_server(servicer, server):
             ),
             'prewrite': grpc.unary_unary_rpc_method_handler(
                     servicer.prewrite,
-                    request_deserializer=distribuidos__pb2.peticion.FromString,
+                    request_deserializer=distribuidos__pb2.peticionEscritura.FromString,
                     response_serializer=distribuidos__pb2.respuesta.SerializeToString,
             ),
             'write': grpc.stream_unary_rpc_method_handler(
@@ -319,7 +319,7 @@ class Archivos(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/archivosRPC.Archivos/prewrite',
-            distribuidos__pb2.peticion.SerializeToString,
+            distribuidos__pb2.peticionEscritura.SerializeToString,
             distribuidos__pb2.respuesta.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

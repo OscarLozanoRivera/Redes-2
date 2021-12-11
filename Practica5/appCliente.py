@@ -1,7 +1,7 @@
 # !/usr/bin/env python3
 # https://github.com/PySimpleGUI/PySimpleGUI
 
-from tkinter import Button, Entry, IntVar, Tk, PhotoImage, Radiobutton, Label, Text, messagebox
+from tkinter import Button, Entry, IntVar, StringVar, Tk, PhotoImage, Radiobutton, Label, Text, messagebox
 from tkinter.constants import E, END, GROOVE, NORMAL, DISABLED, W
 import grpc, distribuidos_pb2, distribuidos_pb2_grpc
 from re import search
@@ -18,12 +18,12 @@ def conectar(ip,port,usu,contra):
     global stub
     global root
     global usuario
+    mensaje="Error de inicio de sesión"
     try:
         channel=grpc.insecure_channel(ip+':'+port)
         stub = distribuidos_pb2_grpc.ArchivosStub(channel)  
         #Iniciar sesión
         response = stub.logging(distribuidos_pb2.autenticacion(usuario=usu, contrasena=contra))
-        mensaje=""
         if response.estado == -1:
             mensaje="Usuario no registrado"
         elif response.estado == 0:
@@ -38,35 +38,33 @@ def conectar(ip,port,usu,contra):
             root.destroy()
   
     except Exception as e:
-        print("")
+        continuar = messagebox.askretrycancel(
+        message=mensaje, title="Error de Inicio de Sesión")
     
         #continuar = messagebox.askretrycancel(
         #    message="Dirección o Puerto Erróneo", title="Error")
         #if not continuar:
         #    root.destroy()
 
-
-
 def conexion():
     global root
     root = Tk()
     # Icono Aplicación
     ancho_ventana = 210
-    alto_ventana = 180
+    alto_ventana = 210
     x_ventana = root.winfo_screenwidth() // 2 - ancho_ventana // 2
     y_ventana = root.winfo_screenheight() // 2 - alto_ventana // 2
     posicion = str(ancho_ventana) + "x" + str(alto_ventana) + \
         "+" + str(x_ventana) + "+" + str(y_ventana)
     root.geometry(posicion)
     root.resizable(False, False)
-    root.config(background="orange")
     root.title("Conexión")
 
     Label(root, text="Escribe IP y Puerto para conectarte").grid( row=0, columnspan=4, sticky="ew", padx=5, pady=10)
-    Label(root, text="IP:", background="orange").grid(row=1, column=0, pady=5)
-    Label(root, text="Puerto:", background="orange").grid(row=2, column=0, pady=5)
-    Label(root, text="Usuario:", background="orange").grid(row=3, column=0, pady=5)
-    Label(root, text="Contraseña:", background="orange").grid(row=4, column=0, pady=5)
+    Label(root, text="IP:" ).grid(row=1, column=0, pady=5)
+    Label(root, text="Puerto:" ).grid(row=2, column=0, pady=5)
+    Label(root, text="Usuario:" ).grid(row=3, column=0, pady=5)
+    Label(root, text="Contraseña:" ).grid(row=4, column=0, pady=5)
     ip = Entry(root)
     ip.grid(row=1, column=1, columnspan=3, pady=5)
     port = Entry(root)
@@ -75,11 +73,9 @@ def conexion():
     usuario.grid(row=3, column=1, columnspan=3, pady=5)
     passw = Entry(root)
     passw.grid(row=4, column=1, columnspan=3, pady=5)
-    
-    #Button(root,command=lambda:getIPHOST(ip.get(),port.get(),nombre.get(),root),text="Conectar").grid(row=3,columnspan=3,column=2,pady=5)
-    #Button(root, command=lambda: getIPHOST('127.0.0.1', '50051',nombre.get(), root),text="Conectar").grid(row=4, columnspan=3, column=2, pady=5)
-    #Button(root, command=lambda: conectar(ip.get(),port.get(),usuario.get(),passw.get()),text="Conectar").grid(row=5, columnspan=3, column=2, pady=5)
-    Button(root, command=lambda: conectar('127.0.0.1', '50051',"Admin","assadmin"),text="Conectar").grid(row=5, columnspan=3, column=2, pady=5)
+
+    Button(root, command=lambda: conectar(ip.get(),port.get(),usuario.get(),passw.get()),text="Conectar").grid(row=5, columnspan=3, column=2, pady=5)
+    #Button(root, command=lambda: conectar('127.0.0.1', '50051',"Admin","assadmin"),text="Conectar").grid(row=5, columnspan=3, column=2, pady=5)
 
     root.mainloop()
 
@@ -92,49 +88,49 @@ def interfaz():
         if response.estado==0:
             mensaje="El archivo "+nombreArchivo+" ya existe"
         elif response.estado==1:
-            mensaje="Archivo creado satisfactoriamente"
+            mensaje="Archivo "+nombreArchivo+" creado satisfactoriamente"
         else:
-            mensaje="No se pudo crear el archivo "+nombreArchivo
+            mensaje="No se pudo crear el archivo: "+nombreArchivo
         monitorRegistro.insert(END,"\n"+mensaje)
 
     def leerArchivo(nombreArchivo):
         response = stub.preread(distribuidos_pb2.peticion(usuario=usuario,nombreArchivo=nombreArchivo))
         if response.estado==1:
-            monitorRegistro.insert(END,"\nSi existe el archivo")
-            monitorRegistro.insert(END,"\n")
+            monitorDatos.delete("1.0",END)
             for response in stub.read(distribuidos_pb2.peticion(usuario=usuario,nombreArchivo=nombreArchivo)):
                 monitorDatos.insert(END,response.datos)
+            monitorRegistro.insert(END,"\nArchivo "+nombreArchivo+" leído satisfactoriamente")
         elif response.estado==0:
-            monitorRegistro.insert(END,"\nNo existe el archivo solicitado")
+            monitorRegistro.insert(END,"\nNo existe el archivo: "+nombreArchivo)
         else:
-            monitorRegistro.insert(END,"\nNo se pudo acceder al archivo solicitado")
+            monitorRegistro.insert(END,"\nNo se pudo acceder al archivo: "+nombreArchivo)
 
     def escribirIterator():
         global texto
         lineas=texto.split("\n")
         for linea in lineas:
-            response=distribuidos_pb2.peticionDatos(datos=linea)
+            response=distribuidos_pb2.peticionDatos(datos=linea+"\n")
             yield response
 
     def escribirArchivo(nombreArchivo):
         global texto
-        response = stub.prewrite(distribuidos_pb2.peticion(usuario=usuario,nombreArchivo=nombreArchivo))
+        response = stub.prewrite(distribuidos_pb2.peticionEscritura(usuario=usuario,nombreArchivo=nombreArchivo,opcionEscritura=opcionEscritura.get()))
         if response.estado==1:
-            monitorRegistro.insert(END,"\nSi existe el archivo")
-            monitorRegistro.insert(END,"\n")
             texto=monitorDatos.get("1.0",END)
             response=stub.write(escribirIterator())
             if response.estado==1:
-                monitorRegistro.insert(END,"\nSe escribió correctamente el archivo")
+                if opcionEscritura.get()=='a':
+                    monitorRegistro.insert(END,"\nSe escribió el archivo "+ nombreArchivo +" satisfactoriamente ")
+                elif opcionEscritura.get()=='w':
+                    monitorRegistro.insert(END,"\nSe sobreescribió el archivo "+ nombreArchivo +"  satisfactoriamente")
             elif response.estado==0:
-                monitorRegistro.insert(END,"\nNo se escribió correctamente el archivo")
+                monitorRegistro.insert(END,"\nNo se escribió el archivo"+ nombreArchivo +"  correctamente ")
             else:
-                monitorRegistro.insert(END,"\nNo se pudo acceder al archivo solicitado")
+                monitorRegistro.insert(END,"\nNo se pudo acceder al archivo: "+ nombreArchivo)
         elif response.estado==0:
-            monitorRegistro.insert(END,"\nNo existe el archivo solicitado")
+            monitorRegistro.insert(END,"\nNo existe el archivo: "+ nombreArchivo)
         else:
-            monitorRegistro.insert(END,"\nNo se pudo acceder al archivo solicitado")
-
+            monitorRegistro.insert(END,"\nNo se pudo acceder al archivo: "+ nombreArchivo)
 
     def renombrarArchivo(nombreArchivo,nuevoNombre):
         mensaje=""
@@ -142,9 +138,9 @@ def interfaz():
         if response.estado==0:
             mensaje="No existe el archivo:  "+nombreArchivo
         elif response.estado==1:
-            mensaje="Archivo renombrado satisfactoriamente"
+            mensaje="Archivo: "+ nombreArchivo +"renombrado satisfactoriamente a:"+nuevoNombre
         elif response.estado==-1:
-            mensaje="Ya existe un archivo :"+nuevoNombre
+            mensaje="No se puede renombrar por que ya existe el archivo :"+nuevoNombre
         elif response.estado==-2:
             mensaje="No se pudo renombrar el archivo:"+nombreArchivo
         monitorRegistro.insert(END,"\n"+mensaje)
@@ -199,15 +195,16 @@ def interfaz():
 
     def listarCarpeta():
         monitorRegistro.insert(END,"\n")
+        a=0
         for response in stub.readdir(distribuidos_pb2.peticion(usuario=usuario,nombreArchivo="")):
+            a+=1
             if  response.isArchivo:
                 monitorRegistro.insert(END,"Archivo")
             else :
                 monitorRegistro.insert(END,"Carpeta")
             monitorRegistro.insert(END,"   :   "+response.nombre+"\n")
-            
-
-
+        if a==0: monitorRegistro.insert(END,"La carpeta está vacía\n")
+              
     def seleccionarEntry():
         global ultimaOpcion
         if ultimaOpcion==8:
@@ -222,6 +219,9 @@ def interfaz():
                 else:
                     if ultimaOpcion==1 or ultimaOpcion==2:
                             labelDatos.grid_forget()
+                    if ultimaOpcion==2:
+                        escrituraOpcion.grid_forget()
+                        escrituraOpcion2.grid_forget()
                     monitorDatos.grid_forget()
                     monitorRegistro.grid(rowspan=8)
                     monitorRegistro.config(height=15)
@@ -239,13 +239,15 @@ def interfaz():
                     labelDatos.config(text="Datos de lectura")
                 else:
                     labelDatos.config(text="Escribe los datos de escritura")
+                    if ultimaOpcion==2:
+                        escrituraOpcion.grid(row=4, column=0, sticky=E, padx=15, pady=5)
+                        escrituraOpcion2.grid(row=4, column=1, sticky=E, padx=15, pady=5)
                 monitorRegistro.grid(rowspan=4)
                 monitorRegistro.config(height=8)
                 monitorDatos.grid(row=6, column=2, rowspan=4,columnspan=2, sticky=W)
-                monitorDatos.delete("1.0",END)
+                
             nombres[ultimaOpcion].config(state=NORMAL)
         
-
     def reiniciar():
         global ultimaOpcion
         if ultimaOpcion != None and ultimaOpcion!=8:
@@ -253,6 +255,10 @@ def interfaz():
                 nombres[ultimaOpcion][0].config(state=DISABLED)
                 nombres[ultimaOpcion][1].config(state=DISABLED)
             else:
+                if ultimaOpcion==2:
+                    escrituraOpcion.grid_forget()
+                    escrituraOpcion2.grid_forget()
+                    opcionEscritura.set("a")
                 nombres[ultimaOpcion].config(state=DISABLED)
         ultimaOpcion = None
         opcion.set(None)
@@ -335,7 +341,7 @@ def interfaz():
     root.call('wm', 'iconphoto', root._w, PhotoImage(
         file='Problema1/media/icono.png'))
     ancho_ventana = 800
-    alto_ventana = 500
+    alto_ventana = 530
     x_ventana = root.winfo_screenwidth() // 2 - ancho_ventana // 2
     y_ventana = root.winfo_screenheight() // 2 - alto_ventana // 2
     posicion = str(ancho_ventana) + "x" + str(alto_ventana) + \
@@ -349,7 +355,8 @@ def interfaz():
                 'Rename', 'Remove', 'MkDir', 'RmDir', 'CD', 'ReadDir']
     opcion = IntVar()
     opcion.set(None)
-    opcion
+    opcionEscritura = StringVar()
+    opcionEscritura.set("a")
     i = 0
     e=1
     Label(root, text="Opción").grid(row=i, column=0, sticky=W, padx=15, pady=5)
@@ -365,7 +372,7 @@ def interfaz():
             nombre = Entry(root, state=DISABLED)
             nombre.grid(row=i+e, column=1, sticky=W, padx=20)
             e+=1
-            Label(root, text="Nuevo:").grid(row=i+e, column=0, sticky=E, padx=15, pady=5)
+            Label(root, text="Nuevo nombre:").grid(row=i+e, column=0, sticky=E, padx=15, pady=5)
             nuevo = Entry(root, state=DISABLED)
             nuevo.grid(row=i+e, column=1, sticky=W, padx=20)
             nombres.append([nombre,nuevo])
@@ -373,6 +380,10 @@ def interfaz():
             nombre = Entry(root, state=DISABLED)
             nombre.grid(row=i+e, column=1, sticky=W, padx=20)
             nombres.append(nombre)    
+            if i==2:
+                e+=1
+                escrituraOpcion=Radiobutton(root, text="Añadir", variable=opcionEscritura, value="a")
+                escrituraOpcion2=Radiobutton(root, text="Sobreescribir", variable=opcionEscritura, value="w")
         
 
         
@@ -394,6 +405,6 @@ def interfaz():
 
 
 if __name__ == "__main__":
-    conectar('127.0.0.1', '50051',"Admin","passadmin")
-    #conexion()
+    #conectar('127.0.0.1', '50051',"Admin","passadmin")
+    conexion()
     interfaz()

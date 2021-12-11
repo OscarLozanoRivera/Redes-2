@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x12\x64istribuidos.proto\x12\x0b\x61rchivosRPC\"4\n\rautenticacion\x12\x0f\n\x07usuario\x18\x01 \x01(\t\x12\x12\n\ncontrasena\x18\x02 \x01(\t\"2\n\x08peticion\x12\x0f\n\x07usuario\x18\x01 \x01(\t\x12\x15\n\rnombreArchivo\x18\x02 \x01(\t\"N\n\x08renombre\x12\x0f\n\x07usuario\x18\x01 \x01(\t\x12\x15\n\rnombreArchivo\x18\x02 \x01(\t\x12\x1a\n\x12nombreNuevoArchivo\x18\x03 \x01(\t\"\x1b\n\trespuesta\x12\x0e\n\x06\x65stado\x18\x01 \x01(\x05\"\x1e\n\rpeticionDatos\x12\r\n\x05\x64\x61tos\x18\x01 \x01(\t\"*\n\x05lista\x12\x0e\n\x06nombre\x18\x01 \x01(\t\x12\x11\n\tisArchivo\x18\x02 \x01(\x08\x32\xda\x05\n\x08\x41rchivos\x12?\n\x07logging\x12\x1a.archivosRPC.autenticacion\x1a\x16.archivosRPC.respuesta\"\x00\x12\x39\n\x06\x63reate\x12\x15.archivosRPC.peticion\x1a\x16.archivosRPC.respuesta\"\x00\x12:\n\x07preread\x12\x15.archivosRPC.peticion\x1a\x16.archivosRPC.respuesta\"\x00\x12=\n\x04read\x12\x15.archivosRPC.peticion\x1a\x1a.archivosRPC.peticionDatos\"\x00\x30\x01\x12;\n\x08prewrite\x12\x15.archivosRPC.peticion\x1a\x16.archivosRPC.respuesta\"\x00\x12?\n\x05write\x12\x1a.archivosRPC.peticionDatos\x1a\x16.archivosRPC.respuesta\"\x00(\x01\x12\x39\n\x06rename\x12\x15.archivosRPC.renombre\x1a\x16.archivosRPC.respuesta\"\x00\x12\x39\n\x06remove\x12\x15.archivosRPC.peticion\x1a\x16.archivosRPC.respuesta\"\x00\x12\x38\n\x05mkdir\x12\x15.archivosRPC.peticion\x1a\x16.archivosRPC.respuesta\"\x00\x12\x38\n\x05rmdir\x12\x15.archivosRPC.peticion\x1a\x16.archivosRPC.respuesta\"\x00\x12\x38\n\x07readdir\x12\x15.archivosRPC.peticion\x1a\x12.archivosRPC.lista\"\x00\x30\x01\x12\x35\n\x02\x63\x64\x12\x15.archivosRPC.peticion\x1a\x16.archivosRPC.respuesta\"\x00\x62\x06proto3'
+  serialized_pb=b'\n\x12\x64istribuidos.proto\x12\x0b\x61rchivosRPC\"4\n\rautenticacion\x12\x0f\n\x07usuario\x18\x01 \x01(\t\x12\x12\n\ncontrasena\x18\x02 \x01(\t\"2\n\x08peticion\x12\x0f\n\x07usuario\x18\x01 \x01(\t\x12\x15\n\rnombreArchivo\x18\x02 \x01(\t\"T\n\x11peticionEscritura\x12\x0f\n\x07usuario\x18\x01 \x01(\t\x12\x15\n\rnombreArchivo\x18\x02 \x01(\t\x12\x17\n\x0fopcionEscritura\x18\x03 \x01(\t\"N\n\x08renombre\x12\x0f\n\x07usuario\x18\x01 \x01(\t\x12\x15\n\rnombreArchivo\x18\x02 \x01(\t\x12\x1a\n\x12nombreNuevoArchivo\x18\x03 \x01(\t\"\x1b\n\trespuesta\x12\x0e\n\x06\x65stado\x18\x01 \x01(\x05\"\x1e\n\rpeticionDatos\x12\r\n\x05\x64\x61tos\x18\x01 \x01(\t\"*\n\x05lista\x12\x0e\n\x06nombre\x18\x01 \x01(\t\x12\x11\n\tisArchivo\x18\x02 \x01(\x08\x32\xe3\x05\n\x08\x41rchivos\x12?\n\x07logging\x12\x1a.archivosRPC.autenticacion\x1a\x16.archivosRPC.respuesta\"\x00\x12\x39\n\x06\x63reate\x12\x15.archivosRPC.peticion\x1a\x16.archivosRPC.respuesta\"\x00\x12:\n\x07preread\x12\x15.archivosRPC.peticion\x1a\x16.archivosRPC.respuesta\"\x00\x12=\n\x04read\x12\x15.archivosRPC.peticion\x1a\x1a.archivosRPC.peticionDatos\"\x00\x30\x01\x12\x44\n\x08prewrite\x12\x1e.archivosRPC.peticionEscritura\x1a\x16.archivosRPC.respuesta\"\x00\x12?\n\x05write\x12\x1a.archivosRPC.peticionDatos\x1a\x16.archivosRPC.respuesta\"\x00(\x01\x12\x39\n\x06rename\x12\x15.archivosRPC.renombre\x1a\x16.archivosRPC.respuesta\"\x00\x12\x39\n\x06remove\x12\x15.archivosRPC.peticion\x1a\x16.archivosRPC.respuesta\"\x00\x12\x38\n\x05mkdir\x12\x15.archivosRPC.peticion\x1a\x16.archivosRPC.respuesta\"\x00\x12\x38\n\x05rmdir\x12\x15.archivosRPC.peticion\x1a\x16.archivosRPC.respuesta\"\x00\x12\x38\n\x07readdir\x12\x15.archivosRPC.peticion\x1a\x12.archivosRPC.lista\"\x00\x30\x01\x12\x35\n\x02\x63\x64\x12\x15.archivosRPC.peticion\x1a\x16.archivosRPC.respuesta\"\x00\x62\x06proto3'
 )
 
 
@@ -103,6 +103,52 @@ _PETICION = _descriptor.Descriptor(
 )
 
 
+_PETICIONESCRITURA = _descriptor.Descriptor(
+  name='peticionEscritura',
+  full_name='archivosRPC.peticionEscritura',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='usuario', full_name='archivosRPC.peticionEscritura.usuario', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='nombreArchivo', full_name='archivosRPC.peticionEscritura.nombreArchivo', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='opcionEscritura', full_name='archivosRPC.peticionEscritura.opcionEscritura', index=2,
+      number=3, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=141,
+  serialized_end=225,
+)
+
+
 _RENOMBRE = _descriptor.Descriptor(
   name='renombre',
   full_name='archivosRPC.renombre',
@@ -144,8 +190,8 @@ _RENOMBRE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=141,
-  serialized_end=219,
+  serialized_start=227,
+  serialized_end=305,
 )
 
 
@@ -176,8 +222,8 @@ _RESPUESTA = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=221,
-  serialized_end=248,
+  serialized_start=307,
+  serialized_end=334,
 )
 
 
@@ -208,8 +254,8 @@ _PETICIONDATOS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=250,
-  serialized_end=280,
+  serialized_start=336,
+  serialized_end=366,
 )
 
 
@@ -247,12 +293,13 @@ _LISTA = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=282,
-  serialized_end=324,
+  serialized_start=368,
+  serialized_end=410,
 )
 
 DESCRIPTOR.message_types_by_name['autenticacion'] = _AUTENTICACION
 DESCRIPTOR.message_types_by_name['peticion'] = _PETICION
+DESCRIPTOR.message_types_by_name['peticionEscritura'] = _PETICIONESCRITURA
 DESCRIPTOR.message_types_by_name['renombre'] = _RENOMBRE
 DESCRIPTOR.message_types_by_name['respuesta'] = _RESPUESTA
 DESCRIPTOR.message_types_by_name['peticionDatos'] = _PETICIONDATOS
@@ -272,6 +319,13 @@ peticion = _reflection.GeneratedProtocolMessageType('peticion', (_message.Messag
   # @@protoc_insertion_point(class_scope:archivosRPC.peticion)
   })
 _sym_db.RegisterMessage(peticion)
+
+peticionEscritura = _reflection.GeneratedProtocolMessageType('peticionEscritura', (_message.Message,), {
+  'DESCRIPTOR' : _PETICIONESCRITURA,
+  '__module__' : 'distribuidos_pb2'
+  # @@protoc_insertion_point(class_scope:archivosRPC.peticionEscritura)
+  })
+_sym_db.RegisterMessage(peticionEscritura)
 
 renombre = _reflection.GeneratedProtocolMessageType('renombre', (_message.Message,), {
   'DESCRIPTOR' : _RENOMBRE,
@@ -310,8 +364,8 @@ _ARCHIVOS = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=327,
-  serialized_end=1057,
+  serialized_start=413,
+  serialized_end=1152,
   methods=[
   _descriptor.MethodDescriptor(
     name='logging',
@@ -358,7 +412,7 @@ _ARCHIVOS = _descriptor.ServiceDescriptor(
     full_name='archivosRPC.Archivos.prewrite',
     index=4,
     containing_service=None,
-    input_type=_PETICION,
+    input_type=_PETICIONESCRITURA,
     output_type=_RESPUESTA,
     serialized_options=None,
     create_key=_descriptor._internal_create_key,
