@@ -1,0 +1,13 @@
+syntax="proto3";
+package balanceoRPC;
+// definición del servicio para mensajes de audio
+service Balanceo {
+        //solicita
+    rpc recibirOrden(peticion) returns (respuesta){}
+}
+message peticion{
+    string mensaje=1;
+}
+message respuesta{
+    string mensajeRespuesta=1;
+}
