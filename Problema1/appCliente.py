@@ -192,8 +192,8 @@ def conexion() -> None:
     nombre = Entry(root)
     nombre.grid(row=3, column=1, columnspan=3, pady=5)
     
-    #Button(root,command=lambda:getIPHOST(ip.get(),port.get(),nombre.get(),root),text="Conectar").grid(row=3,columnspan=3,column=2,pady=5)
-    Button(root, command=lambda: getIPHOST('127.0.0.1', '50051',nombre.get(), root),text="Conectar").grid(row=4, columnspan=3, column=2, pady=5)
+    Button(root,command=lambda:getIPHOST(ip.get(),port.get(),nombre.get(),root),text="Conectar").grid(row=4,columnspan=3,column=2,pady=5)
+    #Button(root, command=lambda: getIPHOST('127.0.0.1', '50051',nombre.get(), root),text="Conectar").grid(row=4, columnspan=3, column=2, pady=5)
 
     root.mainloop()
 
@@ -327,7 +327,7 @@ def actualizar(stub):
         resp="Si"
     if response.textoAudio !="Iniciando":
         panelizquierdo.config(state="normal")
-        panelizquierdo.insert(END,"\n"+response.nombre+" preguntó: "+response.textoAudio+"\nRespuesta:"+resp)
+        panelizquierdo.insert(END,"\n"+response.nombre+" preguntó: \n"+response.textoAudio+"\nRespuesta:"+resp)
         panelizquierdo.config(state="disabled")        
     if response.estado :
         logging.debug("Juego Terminó")

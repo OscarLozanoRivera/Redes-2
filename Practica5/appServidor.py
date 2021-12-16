@@ -215,7 +215,7 @@ class Archivos(distribuidos_pb2_grpc.ArchivosServicer):
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=3))
     distribuidos_pb2_grpc.add_ArchivosServicer_to_server(Archivos(), server)
-    server.add_insecure_port('[::]:50051')
+    server.add_insecure_port('192.168.0.24:50051')
     server.start()
     server.wait_for_termination()
 

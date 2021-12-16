@@ -13,7 +13,7 @@ def mensaje(stub,textEntry):
     textEntry.set(response.mensajeRespuesta)
 
 def GUI():
-    channel = grpc.insecure_channel('localhost:50051')
+    channel = grpc.insecure_channel('192.168.0.24:50051')
     stub = balanceador_pb2_grpc.BalanceoStub(channel)
     global root
     root = Tk()

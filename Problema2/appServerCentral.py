@@ -21,6 +21,7 @@ class Balanceo(balanceador_pb2_grpc.BalanceoServicer):
                 with socket.socket(socket.AF_INET,socket.SOCK_DGRAM) as UDPClientSocket:
                     msgToSend=str.encode(request.mensaje)     
                     UDPClientSocket.sendto(msgToSend, ip)
+                    UDPClientSocket.settimeout(5)
                     msgFromServer,server = UDPClientSocket.recvfrom(bufferSize)
                     print(msgFromServer)
                     break
